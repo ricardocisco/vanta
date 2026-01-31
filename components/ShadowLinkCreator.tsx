@@ -10,7 +10,7 @@ import { ShadowWireClient } from "@radr/shadowwire";
 import QRCode from "react-qr-code";
 import { ProcessStatus } from "./ProcessStatus";
 import { TokenOption } from "@/lib/tokens"; // Ajuste o caminho se necessário
-import { AlertCircle, CheckCircle, Copy, Info } from "lucide-react";
+import { AlertCircle, CheckCircle, Copy, Gift, Info } from "lucide-react";
 
 const MIN_AMOUNT_SOL = 0.1;
 const GAS_FEE = 0.002;
@@ -231,7 +231,10 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="bg-purple-900/30 border border-purple-500/30 px-3 py-1 rounded-full text-xs text-purple-300 font-bold flex items-center gap-2">
-            🎁 Vanta Link
+            <span>
+              <Gift />
+            </span>{" "}
+            Vanta Link
           </div>
           {globalBalance > 0 ? (
             <span className="text-[10px] text-green-400 flex items-center gap-1">
@@ -363,10 +366,15 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
 
         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 mb-4">
           <p className="text-[10px] text-gray-500 uppercase font-bold mb-2">Valor Embrulhado</p>
-          <div className="flex items-center justify-center gap-3">
-            <Image src={globalToken.icon} alt={globalToken.symbol} width={32} height={32} className="rounded-full" />
-            <span className="text-2xl font-bold text-white">{amount}</span>
-            <span className="text-lg text-gray-400 font-medium">{globalToken.symbol}</span>
+          <div className="flex items-center gap-3">
+            <Image src={globalToken.icon} alt={globalToken.symbol} width={38} height={38} className="rounded-full" />
+            <div className="flex items-center w-full justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-white">{amount}</span>
+                <span className="text-md text-gray-400 font-medium">{globalToken.symbol}</span>
+              </div>
+              <span className="text-lg text-gray-400 font-medium">{globalToken.symbol}</span>
+            </div>
           </div>
         </div>
 

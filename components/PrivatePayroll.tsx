@@ -112,7 +112,20 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
       if (!compliance.allowed) {
         setComplianceStatus("risk");
         updateStep(0, "error");
-        throw new Error(`Compliance Block: ${compliance.reason}`);
+
+        const riskInfo = compliance.detail;
+        const riskMessage = riskInfo?.riskLevel || compliance.reason || "Alto Risco";
+        const category = riskInfo?.maliciousAddressesFound?.[0]?.category || "";
+        const hops = riskInfo?.numHops;
+
+        setFormError(
+          `🚫 Destinatário Bloqueado | Score: ${compliance.riskScore ?? "N/A"}/10` +
+            (hops !== undefined ? ` | Hops: ${hops}` : "") +
+            ` | ${riskMessage}` +
+            (category ? ` | Categoria: ${category}` : "")
+        );
+        setLoading(false);
+        return; // Para o fluxo sem throw
       }
       setComplianceStatus("safe");
       updateStep(0, "success");

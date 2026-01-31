@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { ShadowWireClient, initWASM, isWASMSupported } from "@radr/shadowwire";
 import { SUPPORTED_TOKENS, TokenOption } from "@/lib/tokens";
-import { RotateCw, Wallet, Send, Link } from "lucide-react";
+import { RotateCw, Wallet, Send, Link, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import WalletManager from "@/components/WalletManager";
 import PrivatePayroll from "@/components/PrivatePayroll";
@@ -113,7 +113,7 @@ export default function ShadowTerminal() {
           active={activeTab === "wallet"}
           onClick={() => setActiveTab("wallet")}
           label="Carteira"
-          icon={Wallet}
+          icon={Shield}
         />
         <TabButton
           active={activeTab === "transfer"}

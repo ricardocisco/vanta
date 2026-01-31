@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Eye, Gift, Scissors, ShieldX, TriangleAlert, User } from "lucide-react";
 
 interface PrivacyEducationProps {
   sender?: string;
@@ -62,7 +63,9 @@ export const PrivacyEducation = ({ sender }: PrivacyEducationProps) => {
         className="w-full p-4 flex justify-between items-center bg-gray-900/50 hover:bg-gray-800/50 transition-colors"
       >
         <div className="flex items-center gap-3 text-left">
-          <div className="w-8 h-8 rounded-full bg-red-900/20 flex items-center justify-center text-lg">👁️</div>
+          <div className="w-8 h-8 rounded-full bg-red-900/20 flex items-center justify-center text-lg">
+            <Eye />
+          </div>
           <div>
             <h4 className="text-gray-200 font-bold text-xs uppercase tracking-wider">
               Encrypt.trade: Análise de Vigilância
@@ -79,7 +82,10 @@ export const PrivacyEducation = ({ sender }: PrivacyEducationProps) => {
           {/* PARTE 1: O PROBLEMA (Mostra os dados do usuário) */}
           <div className="mb-4 p-3 bg-red-900/10 border border-red-500/20 rounded-lg">
             <p className="text-[10px] text-red-400 font-bold uppercase mb-2 flex items-center gap-2">
-              ⚠️ O que a Blockchain vê agora (Sua Carteira):
+              <span>
+                <TriangleAlert size={18} />
+              </span>
+              O que a Blockchain vê agora (Sua Carteira):
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-300 font-mono">
               <div className="bg-black/30 p-2 rounded">
@@ -103,7 +109,10 @@ export const PrivacyEducation = ({ sender }: PrivacyEducationProps) => {
           {/* PARTE 2: A SOLUÇÃO (Seu visual atual - Track 2) */}
           <div className="relative p-3 bg-green-900/10 border border-green-500/20 rounded-lg">
             <p className="text-[10px] text-green-400 font-bold uppercase mb-2 flex items-center gap-2">
-              🛡️ Com Vanta Link:
+              <span>
+                <ShieldX size={18} />
+              </span>
+              Com Vanta Link:
             </p>
 
             <div className="space-y-3">
@@ -111,21 +120,25 @@ export const PrivacyEducation = ({ sender }: PrivacyEducationProps) => {
               <div className="flex items-center justify-between text-[10px] text-gray-400">
                 <div className="flex flex-col items-center">
                   <span className="mb-1 text-red-400">Você</span>
-                  <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-xs">👤</div>
+                  <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-xs">
+                    <User />
+                  </div>
                 </div>
 
                 {/* Linha Tracejada (Quebrada) */}
                 <div className="flex-1 px-2 relative h-1">
                   <div className="absolute top-0 left-0 w-1/2 h-full bg-red-500/30"></div>
-                  <div className="absolute -top-1.5 left-[45%] bg-[#0a0a0a] border border-green-500 text-green-500 rounded-full w-4 h-4 flex items-center justify-center text-[8px] z-10">
-                    ✂️
+                  <div className="absolute -top-1.5 left-[45%] bg-[#0a0a0a] border border-green-500 text-green-500 rounded-full flex items-center justify-center z-10">
+                    <Scissors size={18} />
                   </div>
                   <div className="absolute top-0 right-0 w-1/2 h-full bg-green-500/30"></div>
                 </div>
 
                 <div className="flex flex-col items-center">
                   <span className="mb-1 text-green-400">Destino</span>
-                  <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-xs">🎁</div>
+                  <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-xs">
+                    <Gift />
+                  </div>
                 </div>
               </div>
 

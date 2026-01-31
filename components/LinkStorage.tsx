@@ -5,6 +5,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Keypair, Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
+import { FolderOpen, Lock, RotateCw, Save, ScrollText } from "lucide-react";
 
 export default function LinkHistory() {
   const { connection } = useConnection();
@@ -187,20 +188,39 @@ export default function LinkHistory() {
   return (
     <div className="w-full max-w-md mx-auto mt-8 bg-[#0F1115] border border-gray-800 rounded-2xl p-6">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-800">
-        <h3 className="text-white font-bold flex items-center gap-2">📜 Histórico</h3>
+        <h3 className="text-white font-bold flex items-center gap-2">
+          <span>
+            <ScrollText />
+          </span>{" "}
+          Histórico
+        </h3>
         <div className="flex gap-2">
-          <button onClick={handleExport} className="text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded">
-            💾 Backup
+          <button
+            onClick={handleExport}
+            className="flex items-center text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded gap-2 cursor-pointer"
+          >
+            <span>
+              <Save size={16} />
+            </span>
+            Backup
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded"
+            className="flex items-center text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded gap-2 cursor-pointer"
           >
-            📂 Restaurar
+            <span>
+              <FolderOpen size={16} />
+            </span>
+            Restaurar
           </button>
           <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
-          <button onClick={loadLinks} className="text-[10px] bg-gray-800 text-purple-400 px-2 py-1 rounded">
-            🔄
+          <button
+            onClick={loadLinks}
+            className="text-[10px] bg-gray-800 text-purple-400 px-2 py-1 rounded cursor-pointer"
+          >
+            <span>
+              <RotateCw />
+            </span>
           </button>
         </div>
       </div>
@@ -274,7 +294,12 @@ export default function LinkHistory() {
           </div>
         ))}
       </div>
-      <p className="text-[9px] text-center text-gray-600 mt-4">🔒 Dados armazenados localmente.</p>
+      <div className="flex items-center justify-center mt-4 gap-2">
+        <span>
+          <Lock size={16} />
+        </span>{" "}
+        <p className="text-xs text-center">Dados armazenados localmente.</p>
+      </div>
     </div>
   );
 }
