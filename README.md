@@ -146,7 +146,7 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/vanta-protocol.git
+git clone https://github.com/ricardocisco/vanta-protocol.git
 cd vanta-protocol
 ```
 
@@ -306,18 +306,6 @@ npm start
 
 ---
 
-## 🛣️ Network Configuration
-
-The application is configured for **Solana Mainnet Beta** by default.
-
-To switch to Devnet for testing, modify `lib/SolanaProvider.tsx`:
-
-```typescript
-const network = WalletAdapterNetwork.Devnet; // Change to Devnet
-```
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -338,7 +326,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🙏 Acknowledgments
 
-- **[Radr Labs](https://radr.dev)** - ShadowWire SDK for privacy-preserving transactions
+- **[Radr Labs](https://www.radrlabs.io/solutions/developers#sdks)** - ShadowWire SDK for privacy-preserving transactions
 - **[Helius](https://helius.dev)** - Fast and reliable Solana RPC infrastructure
 - **[Range Protocol](https://range.org)** - Compliance and risk assessment API
 - **[Encrypt.trade](https://encrypt.trade)** - Privacy education resources
