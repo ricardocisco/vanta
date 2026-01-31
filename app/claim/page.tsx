@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -26,7 +26,7 @@ const WalletMultiButton = dynamic(
 
 const FEE_BUFFER = 5000;
 
-export default function ClaimPage() {
+function ClaimContent() {
   const searchParams = useSearchParams();
   const { connection } = useConnection();
   const { publicKey } = useWallet();
@@ -327,5 +327,17 @@ export default function ClaimPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ClaimPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white">Loading Link...</div>
+      }
+    >
+      <ClaimContent />
+    </Suspense>
   );
 }
