@@ -22,10 +22,10 @@ export default function LinkHistory() {
       return;
     }
 
-    // Ordena por data
+    // Sort by date
     saved.sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
 
-    // Verifica status on-chain
+    // Check on-chain status
     const updatedLinks = await Promise.all(
       saved.map(async (link: any) => {
         try {
@@ -33,7 +33,7 @@ export default function LinkHistory() {
           const tempKeypair = Keypair.fromSecretKey(secret);
           const balance = await connection.getBalance(tempKeypair.publicKey);
 
-          // Se tiver saldo > taxa mínima, está ativo
+          // If balance > minimum fee, it's active
           const isActive = balance > 0.001 * LAMPORTS_PER_SOL;
 
           return { ...link, isActive, currentBalance: balance };
@@ -52,7 +52,7 @@ export default function LinkHistory() {
 
   const handleExport = () => {
     const dataStr = localStorage.getItem("vanta_link_history");
-    if (!dataStr || dataStr === "[]") return alert("Sem histórico.");
+    if (!dataStr || dataStr === "[]") return alert("No history found.");
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
     const fileName = `vanta_backup_${new Date().toISOString().slice(0, 10)}.json`;
     const link = document.createElement("a");
@@ -75,19 +75,19 @@ export default function LinkHistory() {
         const newItems = imported.filter((l: any) => !currentIds.has(l.id));
 
         localStorage.setItem("vanta_link_history", JSON.stringify([...current, ...newItems]));
-        alert(`${newItems.length} links restaurados!`);
+        alert(`${newItems.length} links restored!`);
         loadLinks();
       } catch (err) {
-        alert("Arquivo inválido.");
+        alert("Invalid file.");
       }
     };
     reader.readAsText(file);
   };
 
-  // Reembolso (Cancelamento) - Suporta SOL e SPL Tokens
+  // Refund (Cancellation) - Supports SOL and SPL Tokens
   const handleRefund = async (link: any) => {
-    if (!publicKey) return alert("Conecte a carteira.");
-    if (!confirm("Cancelar link e devolver saldo?")) return;
+    if (!publicKey) return alert("Connect your wallet.");
+    if (!confirm("Cancel link and refund balance?")) return;
 
     setLoadingId(link.id);
     try {
@@ -96,7 +96,7 @@ export default function LinkHistory() {
       const balance = await connection.getBalance(tempKeypair.publicKey);
       const fee = 5000;
 
-      if (balance < fee) throw new Error("Saldo insuficiente para taxa de rede.");
+      if (balance < fee) throw new Error("Insufficient balance for network fee.");
 
       const transaction = new Transaction();
 
@@ -135,7 +135,7 @@ export default function LinkHistory() {
         }
       }
 
-      // Sempre transfere o SOL restante (para gas ou valor principal se for SOL)
+      // Always transfer remaining SOL (for gas or main value if SOL)
       const updatedBalance = await connection.getBalance(tempKeypair.publicKey);
       if (updatedBalance > fee) {
         transaction.add(
@@ -148,7 +148,7 @@ export default function LinkHistory() {
       }
 
       if (transaction.instructions.length === 0) {
-        throw new Error("Nada para reembolsar. Link já foi resgatado.");
+        throw new Error("Nothing to refund. Link was already claimed.");
       }
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
@@ -159,10 +159,10 @@ export default function LinkHistory() {
       const sig = await connection.sendTransaction(transaction, [tempKeypair]);
       await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight });
 
-      alert("Reembolso concluído!");
+      alert("Refund completed!");
       loadLinks();
     } catch (e: any) {
-      alert("Erro: " + e.message);
+      alert("Error: " + e.message);
     } finally {
       setLoadingId(null);
     }
@@ -171,15 +171,15 @@ export default function LinkHistory() {
   const copyLink = (link: any) => {
     const url = `${window.location.origin}/claim?t=${link.symbol}&a=${link.amount}#${link.secretKey}`;
     navigator.clipboard.writeText(url);
-    alert("Copiado!");
+    alert("Copied!");
   };
 
   if (links.length === 0)
     return (
       <div className="text-center mt-8 text-gray-600 text-xs">
-        <p>Sem histórico recente.</p>
+        <p>No recent history.</p>
         <button onClick={() => fileInputRef.current?.click()} className="text-purple-400 underline mt-2">
-          Restaurar Backup
+          Restore Backup
         </button>
         <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
       </div>
@@ -192,7 +192,7 @@ export default function LinkHistory() {
           <span>
             <ScrollText />
           </span>{" "}
-          Histórico
+          History
         </h3>
         <div className="flex gap-2">
           <button
@@ -211,7 +211,7 @@ export default function LinkHistory() {
             <span>
               <FolderOpen size={16} />
             </span>
-            Restaurar
+            Restore
           </button>
           <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
           <button
@@ -240,25 +240,25 @@ export default function LinkHistory() {
                 </span>
                 {link.status === "partial" ? (
                   <span className="text-[9px] bg-orange-900/30 text-orange-400 px-1.5 py-0.5 rounded font-bold animate-pulse">
-                    ⚠️ RECUPERAR
+                    ⚠️ RECOVER
                   </span>
                 ) : link.status === "pending" ? (
                   <span className="text-[9px] bg-blue-900/30 text-blue-400 px-1.5 py-0.5 rounded font-bold">
-                    PENDENTE
+                    PENDING
                   </span>
                 ) : link.isActive ? (
                   <span className="text-[9px] bg-yellow-900/30 text-yellow-500 px-1.5 py-0.5 rounded font-bold">
-                    ATIVO
+                    ACTIVE
                   </span>
                 ) : (
                   <span className="text-[9px] bg-green-900/30 text-green-500 px-1.5 py-0.5 rounded font-bold">
-                    RESGATADO
+                    CLAIMED
                   </span>
                 )}
               </div>
               <p className="text-[10px] text-gray-500 mt-1">{new Date(link.createdAt).toLocaleString()}</p>
               {link.status === "partial" && (
-                <p className="text-[9px] text-orange-400 mt-1">Fundos na temp wallet. Clique em ✕ para recuperar.</p>
+                <p className="text-[9px] text-orange-400 mt-1">Funds in temp wallet. Click ✕ to recover.</p>
               )}
             </div>
 
@@ -269,7 +269,7 @@ export default function LinkHistory() {
                     <button
                       onClick={() => copyLink(link)}
                       className="p-2 bg-blue-900/20 text-blue-400 rounded hover:bg-blue-900/40"
-                      title="Copiar"
+                      title="Copy"
                     >
                       📋
                     </button>
@@ -282,13 +282,13 @@ export default function LinkHistory() {
                         ? "bg-orange-900/30 text-orange-400 hover:bg-orange-900/50"
                         : "bg-red-900/20 text-red-400 hover:bg-red-900/40"
                     }`}
-                    title={link.status === "partial" ? "Recuperar Fundos" : "Cancelar"}
+                    title={link.status === "partial" ? "Recover Funds" : "Cancel"}
                   >
                     {loadingId === link.id ? "..." : link.status === "partial" ? "🔄" : "✕"}
                   </button>
                 </>
               ) : (
-                <span className="text-[10px] text-gray-600 italic px-2">Finalizado</span>
+                <span className="text-[10px] text-gray-600 italic px-2">Completed</span>
               )}
             </div>
           </div>
@@ -298,7 +298,7 @@ export default function LinkHistory() {
         <span>
           <Lock size={16} />
         </span>{" "}
-        <p className="text-xs text-center">Dados armazenados localmente.</p>
+        <p className="text-xs text-center">Data stored locally.</p>
       </div>
     </div>
   );

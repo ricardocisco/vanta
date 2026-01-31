@@ -33,7 +33,7 @@ export const SystemStatus = () => {
     };
 
     checkSystems();
-    const interval = setInterval(checkSystems, 10000); // Check a cada 10s
+    const interval = setInterval(checkSystems, 30000); // Check every 30s (reduced from 10s to save RPC credits)
     return () => clearInterval(interval);
   }, [connection]);
 

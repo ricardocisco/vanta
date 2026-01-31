@@ -6,22 +6,23 @@ import Image from "next/image";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { Keypair, Transaction, SystemProgram } from "@solana/web3.js";
 import bs58 from "bs58";
-import { ShadowWireClient } from "@radr/shadowwire";
+import { ShadowWireClient, SUPPORTED_TOKENS as SDK_TOKENS } from "@radr/shadowwire";
 import QRCode from "react-qr-code";
 import { ProcessStatus } from "./ProcessStatus";
-import { TokenOption } from "@/lib/tokens"; // Ajuste o caminho se necessário
+import { TokenOption } from "@/lib/tokens";
+import { calculateLinkGasFee, getTokenMinimumAmount, getTokenFeePercentage } from "@/lib/fees";
 import { AlertCircle, CheckCircle, Copy, Gift, Info } from "lucide-react";
 
-const MIN_AMOUNT_SOL = 0.1;
-const GAS_FEE = 0.002;
+// SDK Token Type
+type SdkTokenType = (typeof SDK_TOKENS)[number];
 
 interface ShadowLinkCreatorProps {
-  globalToken: TokenOption; // Recebido do Pai (ShadowTerminal)
-  globalBalance: number; // Recebido do Pai
+  globalToken: TokenOption;
+  globalBalance: number;
   onSuccess?: () => void;
 }
 
-// Função auxiliar para salvar no histórico permanente
+// Helper function to save to permanent history
 const saveLinkToHistory = (linkData: any) => {
   const history = JSON.parse(localStorage.getItem("vanta_link_history") || "[]");
   const newEntry = {
@@ -34,14 +35,14 @@ const saveLinkToHistory = (linkData: any) => {
   return newEntry.id;
 };
 
-// Atualiza status de um link no histórico
+// Updates link status in history
 const updateLinkInHistory = (linkId: number, updates: any) => {
   const history = JSON.parse(localStorage.getItem("vanta_link_history") || "[]");
   const updated = history.map((link: any) => (link.id === linkId ? { ...link, ...updates } : link));
   localStorage.setItem("vanta_link_history", JSON.stringify(updated));
 };
 
-// Remove link do histórico (se não completou nenhuma transferência)
+// Remove link from history (if no transfer was completed)
 const removeLinkFromHistory = (linkId: number) => {
   const history = JSON.parse(localStorage.getItem("vanta_link_history") || "[]");
   const filtered = history.filter((link: any) => link.id !== linkId);
@@ -58,46 +59,65 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
+  const [gasFee, setGasFee] = useState<number>(0.003); // Default, will be updated
 
-  // Limpa erro quando digita
+  // Calculate gas fee dynamically on mount
+  useEffect(() => {
+    const loadGasFee = async () => {
+      const fee = await calculateLinkGasFee(connection);
+      setGasFee(fee);
+      console.log("[Link] Dynamic gas fee calculated:", fee, "SOL");
+    };
+    loadGasFee();
+  }, [connection]);
+
+  // Clear error when typing
   useEffect(() => {
     if (error) setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amount]);
 
-  // Controle de Passos
+  // Step Control
   const [steps, setSteps] = useState([
-    { id: "compliance", label: "Verificação Range (Compliance)", status: "pending" as any },
-    { id: "keygen", label: "Gerando Chaves Temporárias", status: "pending" as any },
-    { id: "zkproof", label: "Radr: Prova de Privacidade", status: "pending" as any },
-    { id: "transfer", label: "Transferência para o Link", status: "pending" as any }
+    { id: "compliance", label: "Range Verification (Compliance)", status: "pending" as any },
+    { id: "keygen", label: "Generating Temporary Keys", status: "pending" as any },
+    { id: "zkproof", label: "Radr: Privacy Proof", status: "pending" as any },
+    { id: "transfer", label: "Transfer to Link", status: "pending" as any }
   ]);
 
   const updateStep = (id: string, status: "loading" | "success" | "error", detail?: string) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status, detail } : s)));
   };
 
-  // --- LÓGICA DE CRIAÇÃO ---
+  // --- CREATION LOGIC ---
   const handleCreateLink = async () => {
-    if (!publicKey || !signMessage) return setError("Conecte sua carteira.");
+    if (!publicKey || !signMessage) return setError("Connect your wallet.");
 
     const numAmount = Number(amount);
 
-    // --- VALIDAÇÃO 1: MÍNIMO RADR ---
-    if (globalToken.symbol === "SOL" && numAmount < MIN_AMOUNT_SOL) {
-      return setError(`O valor mínimo permitido pela rede é ${MIN_AMOUNT_SOL} SOL.`);
+    // --- VALIDATION 1: RADR MINIMUM (dynamic from SDK) ---
+    const minAmount = getTokenMinimumAmount(globalToken.symbol);
+    if (numAmount < minAmount) {
+      return setError(`The minimum allowed by the network is ${minAmount} ${globalToken.symbol}.`);
     }
 
-    // --- VALIDAÇÃO 2: SALDO INSUFICIENTE ---
-    // Precisamos ter: Valor do Link + Taxa de Gás (0.002)
-    const totalRequired = numAmount + GAS_FEE;
-    if (totalRequired > globalBalance) {
-      return setError(
-        `Saldo insuficiente. Você precisa de ${totalRequired.toFixed(4)} ${globalToken.symbol} (Valor + Gás).`
-      );
+    // --- VALIDATION 2: INSUFFICIENT TOKEN BALANCE ---
+    // For SOL: we need Link Value + Gas Fee (both in SOL)
+    // For other tokens: we need Link Value in token, Gas Fee is paid separately in SOL
+    if (globalToken.symbol === "SOL") {
+      const totalRequired = numAmount + gasFee;
+      if (totalRequired > globalBalance) {
+        return setError(`Insufficient balance. You need ${totalRequired.toFixed(4)} SOL (Amount + Gas).`);
+      }
+    } else {
+      // For SPL tokens, just check if we have enough of the token
+      if (numAmount > globalBalance) {
+        return setError(`Insufficient balance. You have ${globalBalance.toFixed(4)} ${globalToken.symbol}.`);
+      }
+      // Gas fee will be checked when signing - user needs SOL in public wallet
     }
 
-    // Inicia Processo
+    // Start Process
     setView("processing");
     setSteps((prev) => prev.map((s) => ({ ...s, status: "pending", detail: "" })));
 
@@ -111,7 +131,7 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
       const compliance = await complianceRes.json();
       if (!compliance.allowed) {
         updateStep("compliance", "error");
-        throw new Error("Carteira bloqueada por Compliance.");
+        throw new Error("Wallet blocked by Compliance.");
       }
       updateStep("compliance", "success");
 
@@ -120,20 +140,22 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
       const tempKeypair = Keypair.generate();
       const tempPublicKey = tempKeypair.publicKey.toBase58();
       const secretKeyEncoded = bs58.encode(tempKeypair.secretKey);
-      const tokenIdentifier = globalToken.symbol === "SOL" ? "SOL" : globalToken.mintAddress;
+      // For transfer(), SDK expects token symbol (e.g.: "SOL", "USD1", "USDC")
+      // Note: deposit() uses token_mint (address), but transfer() uses token (symbol)
+      const tokenSymbol = globalToken.symbol;
 
-      // Link seguro com Hash (#)
+      // Secure link with Hash (#)
       const linkUrl = `${window.location.origin}/claim?t=${globalToken.symbol}&a=${amount}#${secretKeyEncoded}`;
       localStorage.setItem("vanta_last_link", linkUrl);
 
-      // ⚠️ SALVA NO HISTÓRICO ANTES DE TRANSFERIR (para recuperação em caso de erro)
+      // ⚠️ SAVE TO HISTORY BEFORE TRANSFER (for recovery in case of error)
       const linkId = saveLinkToHistory({
         secretKey: secretKeyEncoded,
         amount: amount,
         symbol: globalToken.symbol,
-        mint: tokenIdentifier,
+        mint: globalToken.mintAddress,
         decimals: globalToken.decimals,
-        status: "pending", // Marca como pendente até completar
+        status: "pending", // Mark as pending until complete
         txSignature: null
       });
       updateStep("keygen", "success");
@@ -141,76 +163,77 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
       let transferCompleted = false;
 
       try {
-        // 3. Transferência ZK (Radr) - O Valor Real
+        // 3. ZK Transfer (Radr) - The Real Value
         updateStep("zkproof", "loading");
         const client = new ShadowWireClient();
 
-        // SDK transfer() espera valor em unidades normais (ex: 0.5 SOL, não lamports)
+        // SDK transfer() expects value in normal units (e.g.: 0.5 SOL, not lamports)
+        // and token as symbol (not mint address)
         const result = await client.transfer({
           sender: publicKey.toBase58(),
           recipient: tempPublicKey,
           amount: numAmount,
-          token: tokenIdentifier,
+          token: tokenSymbol as SdkTokenType,
           type: "external",
           wallet: { signMessage }
         });
 
-        // Lida com assinatura se necessário
-        if (result.unsigned_tx_base64) {
-          const txBuffer = Buffer.from(result.unsigned_tx_base64, "base64");
+        // Handle signature if needed
+        if ((result as any).unsigned_tx_base64) {
+          const txBuffer = Buffer.from((result as any).unsigned_tx_base64, "base64");
           const transaction = Transaction.from(txBuffer);
           const signature = await sendTransaction(transaction, connection);
           await connection.confirmTransaction(signature, "confirmed");
         } else if (!result.success && !result.tx_signature) {
-          throw new Error(result.error || "Erro no SDK Radr");
+          throw new Error((result as any).error || "Erro no SDK Radr");
         }
 
-        transferCompleted = true; // Fundos já foram transferidos
+        transferCompleted = true; // Funds have been transferred
         updateStep("zkproof", "success");
 
-        // 4. Gás Público (0.002 SOL)
-        // Isso garante que o recebedor possa sacar sem ter SOL na carteira
-        updateStep("transfer", "loading", "Adicionando Gás...");
+        // 4. Public Gas (dynamic fee)
+        // This ensures the receiver can claim without having SOL in wallet
+        updateStep("transfer", "loading", "Adding Gas...");
+        const gasLamports = Math.ceil(gasFee * 1e9); // Use dynamic gas fee
         const gasTx = new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: tempKeypair.publicKey,
-            lamports: GAS_FEE * 1e9 // 0.002 SOL
+            lamports: gasLamports
           })
         );
         const gasSig = await sendTransaction(gasTx, connection);
         await connection.confirmTransaction(gasSig, "confirmed");
         updateStep("transfer", "success");
 
-        // ✅ Tudo ok - Atualiza status para completo
+        // ✅ All ok - Update status to complete
         updateLinkInHistory(linkId, {
           status: "complete",
-          txSignature: gasSig
+          txSignature: gasSig,
+          gasFee: gasFee // Store the gas fee used
         });
       } catch (innerError: any) {
-        // Se deu erro MAS a transferência ZK já foi feita, mantém no histórico para refund
+        // If error BUT ZK transfer was already done, keep in history for refund
         if (transferCompleted) {
           updateLinkInHistory(linkId, {
-            status: "partial", // Fundos na temp wallet, mas sem gás
+            status: "partial", // Funds in temp wallet, but no gas
             error: innerError.message
           });
-          throw new Error(
-            `Fundos transferidos mas houve erro no gás. Use o Histórico para recuperar. (${innerError.message})`
-          );
+          throw new Error(`Funds transferred but gas error occurred. Use History to recover. (${innerError.message})`);
         } else {
-          // Se nem a transferência ZK foi feita, remove do histórico (nada foi perdido)
+          // If ZK transfer wasn't done, remove from history (nothing was lost)
           removeLinkFromHistory(linkId);
           throw innerError;
         }
       }
 
       setGeneratedLink(linkUrl);
-      if (onSuccess) onSuccess(); // Atualiza saldo pai
+      if (onSuccess) onSuccess(); // Update parent balance
       setView("success");
     } catch (e: any) {
       console.error(e);
       updateStep("transfer", "error", e.message);
-      // Volta para input após 3s para corrigir erro
+      // Return to input after 3s to fix error
       setTimeout(() => {
         setView("input");
         setError(e.message);
@@ -224,7 +247,7 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // --- TELA 1: INPUT ---
+  // --- SCREEN 1: INPUT ---
   if (view === "input") {
     return (
       <div className="w-full max-w-md mx-auto bg-[#0F1115] rounded-3xl border border-gray-800 p-6 shadow-2xl relative">
@@ -241,11 +264,11 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
             </span>
           ) : (
-            <span className="text-[10px] text-red-400">Sem Saldo</span>
+            <span className="text-[10px] text-red-400">No Balance</span>
           )}
         </div>
 
-        {/* Input Gigante */}
+        {/* Big Input */}
         <div className="text-center mb-8 relative">
           <div className="flex justify-center items-end gap-2">
             <span className="text-4xl text-gray-500 font-bold mb-4">
@@ -269,11 +292,11 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
           </div>
 
           <p className="text-xs text-gray-500 mt-2">
-            Disponível: {globalBalance.toFixed(4)} {globalToken.symbol}
+            Available: {globalBalance.toFixed(4)} {globalToken.symbol}
           </p>
         </div>
 
-        {/* --- AQUI ESTÁ A CORREÇÃO DA UI DE ERRO --- */}
+        {/* --- ERROR UI FIX --- */}
         {error && (
           <div className="flex items-center gap-2 justify-center mb-6 text-red-400 animate-in fade-in slide-in-from-top-1">
             <AlertCircle size={16} />
@@ -281,26 +304,49 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
           </div>
         )}
 
-        {/* Breakdown de Custos (Só mostra se tiver valor válido) */}
+        {/* Cost Breakdown (Only shows if valid value) */}
         {!error && amount && Number(amount) > 0 && (
           <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 text-xs space-y-2 mb-6">
             <div className="flex justify-between text-gray-400">
-              <span>Valor do Link</span>
+              <span>Link Amount</span>
               <span className="text-white font-mono">
                 {Number(amount).toFixed(4)} {globalToken.symbol}
               </span>
             </div>
+
+            {/* Protocol Fee (SDK) */}
             <div className="flex justify-between text-gray-400">
               <span className="flex items-center gap-1">
-                <Info size={10} /> Taxa Gasless
+                <Info size={10} /> Protocol Fee ({(getTokenFeePercentage(globalToken.symbol) * 100).toFixed(1)}%)
               </span>
-              <span className="text-yellow-500 font-mono">+{GAS_FEE} SOL</span>
+              <span className="text-orange-400 font-mono">
+                -{(Number(amount) * getTokenFeePercentage(globalToken.symbol)).toFixed(4)} {globalToken.symbol}
+              </span>
             </div>
-            <div className="border-t border-gray-700 pt-2 flex justify-between font-bold">
-              <span className="text-gray-300">Total a Debitar</span>
+
+            {/* Gas Fee (Blockchain) */}
+            <div className="flex justify-between text-gray-400">
+              <span className="flex items-center gap-1">
+                <Info size={10} /> Gas Fee (Gasless)
+              </span>
+              <span className="text-yellow-500 font-mono">+{gasFee.toFixed(4)} SOL</span>
+            </div>
+
+            {/* Recipient will receive */}
+            <div className="border-t border-gray-700 pt-2 flex justify-between text-gray-400">
+              <span>Recipient receives</span>
+              <span className="text-green-400 font-mono">
+                ~{(Number(amount) * (1 - getTokenFeePercentage(globalToken.symbol))).toFixed(4)} {globalToken.symbol}
+              </span>
+            </div>
+
+            {/* Total to Debit */}
+            <div className="flex justify-between font-bold">
+              <span className="text-gray-300">Total Cost</span>
               <span className="text-purple-300 font-mono">
-                {(Number(amount) + (globalToken.symbol === "SOL" ? GAS_FEE : 0)).toFixed(4)} {globalToken.symbol}
-                {globalToken.symbol !== "SOL" && ` + ${GAS_FEE} SOL`}
+                {Number(amount).toFixed(4)} {globalToken.symbol}
+                {globalToken.symbol !== "SOL" && ` + ${gasFee.toFixed(4)} SOL`}
+                {globalToken.symbol === "SOL" && ` + ${gasFee.toFixed(4)} SOL`}
               </span>
             </div>
           </div>
@@ -311,13 +357,13 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
           disabled={Number(amount) <= 0}
           className="w-full py-4 bg-white hover:bg-gray-200 text-black font-bold rounded-2xl text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Gerar Link Privado
+          Generate Private Link
         </button>
       </div>
     );
   }
 
-  // --- TELA 2: PROCESSANDO ---
+  // --- SCREEN 2: PROCESSING ---
   if (view === "processing") {
     return (
       <div className="max-w-md mx-auto p-6 bg-gray-900 rounded-3xl border border-gray-800 shadow-xl">
@@ -325,20 +371,20 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
           <div className="w-16 h-16 bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <span className="text-2xl">⚙️</span>
           </div>
-          <h3 className="text-white font-bold">Criando Vanta Link...</h3>
-          <p className="text-gray-500 text-xs mt-1">Garantindo anonimato via ZK Proofs.</p>
+          <h3 className="text-white font-bold">Creating Vanta Link...</h3>
+          <p className="text-gray-500 text-xs mt-1">Ensuring anonymity via ZK Proofs.</p>
         </div>
         <ProcessStatus steps={steps} />
       </div>
     );
   }
 
-  // --- TELA 3: SUCESSO ---
+  // --- SCREEN 3: SUCCESS ---
   return (
     <div className="max-w-md mx-auto p-6 bg-[#0F1115] rounded-3xl border border-gray-800 shadow-2xl text-white animate-fade-in">
       <div className="text-center">
-        <h2 className="text-2xl font-bold mb-1">Pronto! 🎉</h2>
-        <p className="text-gray-400 text-sm mb-6">Fundos embrulhados com sucesso.</p>
+        <h2 className="text-2xl font-bold mb-1">Ready! 🎉</h2>
+        <p className="text-gray-400 text-sm mb-6">Funds wrapped successfully.</p>
 
         <div className="bg-white p-4 rounded-xl inline-block mb-6">
           <QRCode
@@ -365,7 +411,7 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
         </div>
 
         <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 mb-4">
-          <p className="text-[10px] text-gray-500 uppercase font-bold mb-2">Valor Embrulhado</p>
+          <p className="text-[10px] text-gray-500 uppercase font-bold mb-2">Wrapped Amount</p>
           <div className="flex items-center gap-3">
             <Image src={globalToken.icon} alt={globalToken.symbol} width={38} height={38} className="rounded-full" />
             <div className="flex items-center w-full justify-between gap-3">
@@ -386,7 +432,7 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
           }}
           className="mt-4 text-gray-500 text-sm hover:text-white font-medium transition-colors"
         >
-          ← Criar Novo Link
+          ← Create New Link
         </button>
       </div>
     </div>

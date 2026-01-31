@@ -4,12 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { Transaction, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddress, getAccount } from "@solana/spl-token";
-import { ShadowWireClient, TokenUtils } from "@radr/shadowwire";
+import { ShadowWireClient, SUPPORTED_TOKENS as SDK_TOKENS } from "@radr/shadowwire";
 import Image from "next/image";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { TokenOption } from "@/lib/tokens";
+import { getTokenFeePercentage } from "@/lib/fees";
 import { CheckCircle, AlertCircle, Loader2, Wallet, ArrowDownToLine, Lock, Pen, Radio } from "lucide-react";
+
+// SDK Token Type
+type SdkTokenType = (typeof SDK_TOKENS)[number];
 
 interface WalletManagerProps {
   selectedToken: TokenOption;
@@ -21,13 +25,13 @@ interface WalletManagerProps {
 type FeedbackType = "success" | "error" | null;
 type DepositStep = "idle" | "preparing" | "signing" | "confirming" | "done";
 
-// Componente Stepper Vertical para Depósito
+// Vertical Stepper Component for Deposit
 function DepositStepper({ currentStep }: { currentStep: DepositStep }) {
   const steps = [
-    { id: "preparing", label: "Preparando", description: "Gerando prova ZK...", icon: Lock },
-    { id: "signing", label: "Assinatura", description: "Confirme na carteira", icon: Pen },
-    { id: "confirming", label: "Confirmando", description: "Aguardando blockchain", icon: Radio },
-    { id: "done", label: "Concluído", description: "Depósito realizado!", icon: CheckCircle }
+    { id: "preparing", label: "Preparing", description: "Generating ZK proof...", icon: Lock },
+    { id: "signing", label: "Signing", description: "Confirm in wallet", icon: Pen },
+    { id: "confirming", label: "Confirming", description: "Waiting for blockchain", icon: Radio },
+    { id: "done", label: "Complete", description: "Deposit successful!", icon: CheckCircle }
   ];
 
   const getStepIndex = (step: DepositStep) => steps.findIndex((s) => s.id === step);
@@ -44,7 +48,7 @@ function DepositStepper({ currentStep }: { currentStep: DepositStep }) {
 
         return (
           <div key={step.id} className="flex items-start gap-3">
-            {/* Ícone + Linha */}
+            {/* Icon + Line */}
             <div className="flex flex-col items-center">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
@@ -63,7 +67,7 @@ function DepositStepper({ currentStep }: { currentStep: DepositStep }) {
                   <Icon size={14} />
                 )}
               </div>
-              {/* Linha conectora */}
+              {/* Connector Line */}
               {!isLast && (
                 <div
                   className={`w-0.5 h-6 transition-all duration-300 ${isCompleted ? "bg-green-500/50" : "bg-gray-700"}`}
@@ -71,7 +75,7 @@ function DepositStepper({ currentStep }: { currentStep: DepositStep }) {
               )}
             </div>
 
-            {/* Texto */}
+            {/* Text */}
             <div className={`pt-1 ${isPending ? "opacity-40" : ""}`}>
               <p
                 className={`text-xs font-bold ${
@@ -105,11 +109,11 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
     message: ""
   });
 
-  // Saldo da carteira pública
+  // Public wallet balance
   const [publicBalance, setPublicBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState(false);
 
-  // Busca saldo da carteira pública
+  // Fetch public wallet balance
   const fetchPublicBalance = useCallback(async () => {
     if (!publicKey) return;
 
@@ -126,11 +130,11 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
           const tokenAccount = await getAccount(connection, ata);
           setPublicBalance(Number(tokenAccount.amount) / Math.pow(10, selectedToken.decimals));
         } catch {
-          setPublicBalance(0); // Conta não existe
+          setPublicBalance(0); // Account doesn't exist
         }
       }
     } catch (e) {
-      console.error("Erro ao buscar saldo público:", e);
+      console.error("Error fetching public balance:", e);
     } finally {
       setLoadingBalance(false);
     }
@@ -140,7 +144,7 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
     fetchPublicBalance();
   }, [fetchPublicBalance]);
 
-  // Limpa feedback após 5 segundos
+  // Clear feedback after 5 seconds
   useEffect(() => {
     if (feedback.type) {
       const timer = setTimeout(() => setFeedback({ type: null, message: "" }), 5000);
@@ -155,36 +159,36 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
     }
   }, [withdrawFeedback]);
 
-  // Labels para cada etapa do depósito
+  // Labels for each deposit step
   const getDepositStepLabel = (step: DepositStep) => {
     switch (step) {
       case "preparing":
-        return "Preparando transação...";
+        return "Preparing transaction...";
       case "signing":
-        return "Aguardando assinatura...";
+        return "Waiting for signature...";
       case "confirming":
-        return "Confirmando na blockchain...";
+        return "Confirming on blockchain...";
       case "done":
-        return "Concluído!";
+        return "Complete!";
       default:
-        return "Depositar";
+        return "Deposit";
     }
   };
 
-  // --- DEPOSITAR ---
+  // --- DEPOSIT ---
   const handleDeposit = async () => {
     if (!publicKey) return;
 
-    // Validações
+    // Validations
     const numAmount = Number(amount);
     if (numAmount <= 0) {
-      setFeedback({ type: "error", message: "Digite um valor válido." });
+      setFeedback({ type: "error", message: "Enter a valid amount." });
       return;
     }
     if (numAmount > publicBalance) {
       setFeedback({
         type: "error",
-        message: `Saldo insuficiente. Você tem ${publicBalance.toFixed(4)} ${selectedToken.symbol}.`
+        message: `Insufficient balance. You have ${publicBalance.toFixed(4)} ${selectedToken.symbol}.`
       });
       return;
     }
@@ -194,37 +198,103 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
     setDepositStep("preparing");
 
     try {
-      const client = new ShadowWireClient({});
-      const amountInSmallestUnit = TokenUtils.toSmallestUnit(numAmount, selectedToken.symbol);
+      const client = new ShadowWireClient({ debug: true });
 
-      const result = await client.deposit({
+      // Check SDK minimum amount for this token
+      const minimumAmount = client.getMinimumAmount(selectedToken.symbol as SdkTokenType);
+      console.log("[Deposit] SDK minimum for", selectedToken.symbol, ":", minimumAmount);
+
+      if (numAmount < minimumAmount) {
+        setFeedback({
+          type: "error",
+          message: `Minimum deposit is ${minimumAmount} ${selectedToken.symbol}`
+        });
+        setLoading(false);
+        setDepositStep("idle");
+        return;
+      }
+
+      // According to docs, deposit expects amount in smallest units
+      // For SOL: just wallet + amount
+      // For SPL tokens: wallet + amount + token_mint (mint address)
+      const amountInSmallestUnit = Math.floor(numAmount * Math.pow(10, selectedToken.decimals));
+      const isSOL = selectedToken.symbol === "SOL";
+
+      console.log("[Deposit] Payload:", {
         wallet: publicKey.toBase58(),
-        amount: Number(amountInSmallestUnit),
-        token: selectedToken.symbol
+        amount: amountInSmallestUnit,
+        token_mint: isSOL ? "(native SOL)" : selectedToken.mintAddress,
+        originalAmount: numAmount,
+        decimals: selectedToken.decimals
       });
+
+      // Build deposit params - only include token_mint for SPL tokens
+      const depositParams: any = {
+        wallet: publicKey.toBase58(),
+        amount: amountInSmallestUnit
+      };
+
+      if (!isSOL) {
+        depositParams.token_mint = selectedToken.mintAddress;
+      }
+
+      const result = await client.deposit(depositParams);
+
+      console.log("[Deposit] SDK Response:", result);
 
       if (result.unsigned_tx_base64) {
         setDepositStep("signing");
         const txBuffer = Buffer.from(result.unsigned_tx_base64, "base64");
         const transaction = Transaction.from(txBuffer);
-        const signature = await sendTransaction(transaction, connection);
 
-        setDepositStep("confirming");
-        await connection.confirmTransaction(signature, "confirmed");
+        console.log("[Deposit] Sending transaction...");
+        console.log(
+          "[Deposit] Wallet SOL balance for fees:",
+          (await connection.getBalance(publicKey)) / LAMPORTS_PER_SOL
+        );
 
-        setDepositStep("done");
-        setFeedback({
-          type: "success",
-          message: `✅ Depósito de ${amount} ${selectedToken.symbol} confirmado!`
-        });
-        setAmount("");
-        onUpdateBalance();
-        fetchPublicBalance(); // Atualiza saldo público
+        try {
+          const signature = await sendTransaction(transaction, connection);
+          console.log("[Deposit] Transaction sent:", signature);
+          console.log("[Deposit] View on Solscan: https://solscan.io/tx/" + signature);
+
+          setDepositStep("confirming");
+          const confirmation = await connection.confirmTransaction(signature, "confirmed");
+
+          // Check if transaction actually succeeded
+          if (confirmation.value.err) {
+            console.error("[Deposit] Transaction failed on-chain:", confirmation.value.err);
+            throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+          }
+
+          // Double-check by fetching transaction status
+          const txDetails = await connection.getTransaction(signature, { commitment: "confirmed" });
+          if (txDetails?.meta?.err) {
+            console.error("[Deposit] Transaction error details:", txDetails.meta.err);
+            throw new Error(`Transaction reverted: ${JSON.stringify(txDetails.meta.err)}`);
+          }
+
+          console.log("[Deposit] Transaction confirmed successfully!");
+
+          setDepositStep("done");
+          setFeedback({
+            type: "success",
+            message: `✅ Deposit of ${amount} ${selectedToken.symbol} confirmed!`
+          });
+          setAmount("");
+          onUpdateBalance();
+          fetchPublicBalance(); // Update public balance
+        } catch (sendError: any) {
+          console.error("[Deposit] Send/confirm error:", sendError);
+          throw new Error(sendError.message || "Failed to send transaction. Check your SOL balance for fees.");
+        }
+      } else {
+        throw new Error("SDK did not return a transaction to sign.");
       }
     } catch (error: any) {
       setFeedback({
         type: "error",
-        message: error.message || "Falha no depósito. Tente novamente."
+        message: error.message || "Deposit failed. Try again."
       });
     } finally {
       setLoading(false);
@@ -232,25 +302,44 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
     }
   };
 
-  // --- SACAR ---
+  // --- WITHDRAW ---
   const handleWithdraw = async () => {
     if (!publicKey || privateBalance <= 0) return;
 
-    const feePercentage = parseFloat(selectedToken.fee.replace("%", "")) / 100;
+    const feePercentage = getTokenFeePercentage(selectedToken.symbol);
     const maxWithdraw = privateBalance * (1 - feePercentage);
 
     setWithdrawLoading(true);
     setWithdrawFeedback({ type: null, message: "" });
 
     try {
-      const client = new ShadowWireClient();
-      const amountSmallestUnit = Math.floor(maxWithdraw * Math.pow(10, selectedToken.decimals));
+      const client = new ShadowWireClient({ debug: true });
 
-      const result = await client.withdraw({
+      // For SOL: just wallet + amount
+      // For SPL tokens: wallet + amount + token_mint (mint address)
+      const amountInSmallestUnit = Math.floor(maxWithdraw * Math.pow(10, selectedToken.decimals));
+      const isSOL = selectedToken.symbol === "SOL";
+
+      console.log("[Withdraw] Payload:", {
         wallet: publicKey.toBase58(),
-        amount: amountSmallestUnit,
-        token: selectedToken.symbol
+        amount: amountInSmallestUnit,
+        token_mint: isSOL ? "(native SOL)" : selectedToken.mintAddress,
+        originalAmount: maxWithdraw
       });
+
+      // Build withdraw params - only include token_mint for SPL tokens
+      const withdrawParams: any = {
+        wallet: publicKey.toBase58(),
+        amount: amountInSmallestUnit
+      };
+
+      if (!isSOL) {
+        withdrawParams.token_mint = selectedToken.mintAddress;
+      }
+
+      const result = await client.withdraw(withdrawParams);
+
+      console.log("[Withdraw] SDK Response:", result);
 
       if (result.unsigned_tx_base64) {
         const txBuffer = Buffer.from(result.unsigned_tx_base64, "base64");
@@ -260,7 +349,7 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
 
         setWithdrawFeedback({
           type: "success",
-          message: `✅ Saque de ~${maxWithdraw.toFixed(4)} ${selectedToken.symbol} realizado!`
+          message: `✅ Withdrawal of ~${maxWithdraw.toFixed(4)} ${selectedToken.symbol} completed!`
         });
         onUpdateBalance();
         fetchPublicBalance();
@@ -268,7 +357,7 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
     } catch (e: any) {
       setWithdrawFeedback({
         type: "error",
-        message: e.message || "Erro no saque. Tente novamente."
+        message: e.message || "Withdrawal error. Try again."
       });
     } finally {
       setWithdrawLoading(false);
@@ -277,37 +366,34 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
 
   return (
     <div className="space-y-6 animate-fade-in max-w-lg mx-auto">
-      {/* Card Educativo */}
+      {/* Educational Card */}
       <div className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-xl">
         <h3 className="text-blue-400 font-bold text-sm mb-2 flex items-center gap-2">
           <ArrowDownToLine size={16} />
-          Cofre Privado
+          Private Vault
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed">
-          Para garantir anonimato, seus fundos precisam entrar no Shielded Pool. A partir daqui, ninguém sabe quem envia
-          o dinheiro.
+          To ensure anonymity, your funds need to enter the Shielded Pool. From here, no one knows who sends the money.
         </p>
       </div>
 
       <div className="space-y-4">
-        {/* Input de Depósito */}
+        {/* Deposit Input */}
         <div className="p-4 bg-gray-900 rounded-xl border border-gray-700">
           <div className="flex justify-between items-center mb-3">
-            <label className="text-xs text-gray-500 uppercase font-bold">
-              Adicionar Fundos ({selectedToken.symbol})
-            </label>
+            <label className="text-xs text-gray-500 uppercase font-bold">Add Funds ({selectedToken.symbol})</label>
 
-            {/* Saldo da Carteira Pública */}
+            {/* Public Wallet Balance */}
             <div className="flex items-center gap-2 text-xs">
               <Wallet size={12} className="text-gray-500" />
-              <span className="text-gray-500">Disponível:</span>
+              <span className="text-gray-500">Available:</span>
               {loadingBalance ? (
                 <Loader2 size={12} className="animate-spin text-gray-400" />
               ) : (
                 <button
                   onClick={() => setAmount(publicBalance.toFixed(selectedToken.decimals))}
                   className="text-purple-400 hover:text-purple-300 font-mono font-bold transition-colors"
-                  title="Clique para usar o máximo"
+                  title="Click to use maximum"
                 >
                   {publicBalance.toFixed(4)} {selectedToken.symbol}
                 </button>
@@ -350,15 +436,15 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
               ) : depositStep === "done" ? (
                 <span className="flex items-center gap-2">
                   <CheckCircle size={16} />
-                  Feito!
+                  Done!
                 </span>
               ) : (
-                "Depositar"
+                "Deposit"
               )}
             </Button>
           </div>
 
-          {/* Feedback de Depósito */}
+          {/* Deposit Feedback */}
           {feedback.type && (
             <div
               className={`mt-3 p-3 rounded-lg flex items-start gap-2 text-sm animate-in fade-in slide-in-from-top-1 ${
@@ -376,7 +462,7 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
             </div>
           )}
 
-          {/* Stepper vertical durante loading */}
+          {/* Vertical stepper during loading */}
           {loading && depositStep !== "idle" && (
             <div className="mt-3 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
               <DepositStepper currentStep={depositStep} />
@@ -384,15 +470,15 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
           )}
         </div>
 
-        {/* Botão de Saque */}
+        {/* Withdraw Button */}
         {privateBalance > 0 && (
           <div className="p-4 bg-gray-900 rounded-xl border border-gray-700">
             <div className="flex justify-between items-center">
               <div>
-                <span className="text-sm text-gray-300">Resgatar todo saldo privado</span>
+                <span className="text-sm text-gray-300">Withdraw all private balance</span>
                 <p className="text-[10px] text-gray-500 mt-0.5">
-                  ~{(privateBalance * (1 - parseFloat(selectedToken.fee.replace("%", "")) / 100)).toFixed(4)}{" "}
-                  {selectedToken.symbol} (após taxa)
+                  ~{(privateBalance * (1 - getTokenFeePercentage(selectedToken.symbol))).toFixed(4)}{" "}
+                  {selectedToken.symbol} (after fee)
                 </p>
               </div>
               <Button
@@ -404,15 +490,15 @@ export default function WalletManager({ selectedToken, privateBalance, onUpdateB
                 {withdrawLoading ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    Sacando...
+                    Withdrawing...
                   </>
                 ) : (
-                  "Sacar Tudo"
+                  "Withdraw All"
                 )}
               </Button>
             </div>
 
-            {/* Feedback de Saque */}
+            {/* Withdraw Feedback */}
             {withdrawFeedback.type && (
               <div
                 className={`mt-3 p-3 rounded-lg flex items-start gap-2 text-sm animate-in fade-in slide-in-from-top-1 ${

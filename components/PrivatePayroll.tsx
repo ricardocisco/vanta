@@ -4,23 +4,27 @@ import { Buffer } from "buffer";
 import { useState, useEffect } from "react";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { ShadowWireClient } from "@radr/shadowwire";
+import { ShadowWireClient, SUPPORTED_TOKENS as SDK_TOKENS } from "@radr/shadowwire";
 import { ComplianceBadge } from "./ui/ComplianceBadge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { PrivacyEducation } from "./PrivacyEducation";
 import { ProcessStatus } from "./ProcessStatus";
-import { TokenOption } from "@/lib/tokens"; // Ajuste import
+import { TokenOption } from "@/lib/tokens";
+import { getTokenFeePercentage } from "@/lib/fees";
 
-// Props recebidas do Pai (ShadowTerminal)
+// SDK Token Type
+type SdkTokenType = (typeof SDK_TOKENS)[number];
+
+// Props received from Parent (ShadowTerminal)
 interface PrivatePayrollProps {
   selectedToken: TokenOption;
   privateBalance: number;
   onSuccess: () => void; // Para atualizar saldo após envio
 }
 
-// Tipo compatível com ProcessStatus
+// Type compatible with ProcessStatus
 type ProcessStep = { id: string; label: string; status: "pending" | "loading" | "success" | "error"; detail?: string };
 
 export default function PrivatePayroll({ selectedToken, privateBalance, onSuccess }: PrivatePayrollProps) {
@@ -42,31 +46,31 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
 
     if (matches.length > 0) {
       return matches.map((match) => ({
-        label: match[1] === "TX1" ? "Depósito no Vault" : "Transferência Privada",
+        label: match[1] === "TX1" ? "Vault Deposit" : "Private Transfer",
         hash: match[2]
       }));
     }
 
-    // Fallback: se não for o formato esperado, retorna como única tx
-    return [{ label: "Transação", hash: raw }];
+    // Fallback: if not expected format, return as single tx
+    return [{ label: "Transaction", hash: raw }];
   };
 
   // Steps Visuais - Usando formato compatível com ProcessStatus
   const [complianceStatus, setComplianceStatus] = useState<"idle" | "loading" | "safe" | "risk">("idle");
   const [processSteps, setProcessSteps] = useState<ProcessStep[]>([
-    { id: "compliance", label: "Validação Range", status: "pending" },
-    { id: "zkproof", label: "Prova ZK (Radr)", status: "pending" },
+    { id: "compliance", label: "Range Validation", status: "pending" },
+    { id: "zkproof", label: "ZK Proof (Radr)", status: "pending" },
     { id: "relayer", label: "Relayer (Helius)", status: "pending" }
   ]);
 
-  // Cálculo de Taxa Estimada
+  // Fee Estimate Calculation
   useEffect(() => {
     const calcFee = () => {
       if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
         setFeeEstimate("0");
         return;
       }
-      const feePercentage = parseFloat(selectedToken.fee.replace("%", "")) / 100;
+      const feePercentage = getTokenFeePercentage(selectedToken.symbol);
       const calculatedFee = Number(amount) * feePercentage;
       setFeeEstimate(calculatedFee.toFixed(selectedToken.decimals));
     };
@@ -84,19 +88,19 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
 
   const handlePay = async () => {
     setFormError(null);
-    if (!connected || !publicKey || !signMessage) return setFormError("Conecte a carteira.");
-    if (!recipient) return setFormError("Informe o endereço.");
+    if (!connected || !publicKey || !signMessage) return setFormError("Connect your wallet.");
+    if (!recipient) return setFormError("Enter the address.");
     try {
       new PublicKey(recipient);
     } catch {
-      return setFormError("Endereço inválido.");
+      return setFormError("Invalid address.");
     }
-    if (isNaN(Number(amount)) || Number(amount) <= 0) return setFormError("Valor inválido.");
+    if (isNaN(Number(amount)) || Number(amount) <= 0) return setFormError("Invalid amount.");
 
     setLoading(true);
     setProcessSteps([
-      { id: "compliance", label: "Validação Range", status: "loading" },
-      { id: "zkproof", label: "Prova ZK (Radr)", status: "pending" },
+      { id: "compliance", label: "Range Validation", status: "loading" },
+      { id: "zkproof", label: "ZK Proof (Radr)", status: "pending" },
       { id: "relayer", label: "Relayer (Helius)", status: "pending" }
     ]);
 
@@ -119,13 +123,13 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
         const hops = riskInfo?.numHops;
 
         setFormError(
-          `🚫 Destinatário Bloqueado | Score: ${compliance.riskScore ?? "N/A"}/10` +
+          `🚫 Recipient Blocked | Score: ${compliance.riskScore ?? "N/A"}/10` +
             (hops !== undefined ? ` | Hops: ${hops}` : "") +
             ` | ${riskMessage}` +
-            (category ? ` | Categoria: ${category}` : "")
+            (category ? ` | Category: ${category}` : "")
         );
         setLoading(false);
-        return; // Para o fluxo sem throw
+        return; // Stop flow without throw
       }
       setComplianceStatus("safe");
       updateStep(0, "success");
@@ -134,14 +138,14 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
       updateStep(1, "loading");
       const client = new ShadowWireClient();
 
-      // SDK transfer() espera valor em unidades normais (ex: 0.5 SOL, não lamports)
+      // SDK transfer() expects value in normal units (e.g.: 0.5 SOL, not lamports)
       const amountToSend = Number(amount);
 
       const result = await client.transfer({
         sender: publicKey.toBase58(),
         recipient: recipient,
         amount: amountToSend,
-        token: selectedToken.symbol as any,
+        token: selectedToken.symbol as SdkTokenType,
         type: "external",
         wallet: { signMessage }
       });
@@ -149,24 +153,24 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
       updateStep(1, "success");
       updateStep(2, "loading");
 
-      if (result.unsigned_tx_base64) {
-        const txBuffer = Buffer.from(result.unsigned_tx_base64, "base64");
+      if ((result as any).unsigned_tx_base64) {
+        const txBuffer = Buffer.from((result as any).unsigned_tx_base64, "base64");
         const transaction = Transaction.from(txBuffer);
         const signature = await sendTransaction(transaction, connection);
         await connection.confirmTransaction(signature, "confirmed");
         updateStep(2, "success");
-        onSuccess(); // Atualiza saldo pai
+        onSuccess(); // Update parent balance
       } else if (result.success && result.tx_signature) {
         console.log("Relayer Success:", result.tx_signature);
         updateStep(2, "success");
 
-        // Parseia as múltiplas transações
+        // Parse multiple transactions
         const txs = parseTransactionSignatures(result.tx_signature);
         setResultTxs(txs);
         setAmount("");
-        onSuccess(); // Atualiza saldo pai
+        onSuccess(); // Update parent balance
       } else {
-        throw new Error(result.error || "Erro desconhecido.");
+        throw new Error((result as any).error || "Unknown error.");
       }
     } catch (error: any) {
       console.error(error);
@@ -182,13 +186,13 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
     <div className="flex flex-col md:flex-row gap-8 animate-fade-in">
       {/* Coluna Esquerda: Form */}
       <div className="flex-1 space-y-5">
-        {/* Input Destinatário */}
+        {/* Recipient Input */}
         <div>
-          <Label className="text-xs text-gray-500 uppercase font-bold">Destinatário</Label>
+          <Label className="text-xs text-gray-500 uppercase font-bold">Recipient</Label>
           <Input
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
-            placeholder="Endereço Solana..."
+            placeholder="Solana Address..."
             className="w-full mt-2 bg-gray-900 border border-gray-700 p-3 h-11 rounded text-white focus:border-purple-500 font-mono text-sm"
           />
           <div className="mt-2 h-6">
@@ -196,11 +200,11 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
           </div>
         </div>
 
-        {/* Input Valor */}
+        {/* Amount Input */}
         <div>
           <Label className="text-xs text-gray-500 uppercase font-bold flex justify-between">
-            <span>Valor ({selectedToken.symbol})</span>
-            <span className="text-gray-400">Disp: {(privateBalance - Number(feeEstimate)).toFixed(4)}</span>
+            <span>Amount ({selectedToken.symbol})</span>
+            <span className="text-gray-400">Avail: {(privateBalance - Number(feeEstimate)).toFixed(4)}</span>
           </Label>
           <div className="relative mt-2">
             <Input
@@ -212,7 +216,7 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
             />
             <Button
               onClick={() => {
-                const feePct = parseFloat(selectedToken.fee.replace("%", "")) / 100;
+                const feePct = getTokenFeePercentage(selectedToken.symbol);
                 const max = privateBalance / (1 + feePct);
                 setAmount(max.toFixed(selectedToken.decimals));
               }}
@@ -222,7 +226,7 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
             </Button>
           </div>
           <p className="text-[10px] text-gray-500 mt-1">
-            Taxa: ~{feeEstimate} {selectedToken.symbol}
+            Fee: ~{feeEstimate} {selectedToken.symbol}
           </p>
         </div>
 
@@ -231,7 +235,7 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
           disabled={loading || Number(amount) <= 0}
           className="w-full py-6 bg-linear-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white rounded-lg font-bold shadow-lg"
         >
-          {loading ? "Processando..." : "💸 Enviar Pagamento Seguro"}
+          {loading ? "Processing..." : "💸 Send Secure Payment"}
         </Button>
 
         {formError && (
@@ -245,13 +249,11 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
 
       {/* Coluna Direita: Status usando ProcessStatus unificado */}
       <div className="w-full md:w-1/3 md:border-l border-gray-800 md:pl-6 pt-6 md:pt-0">
-        <ProcessStatus steps={processSteps} title="Progresso" />
+        <ProcessStatus steps={processSteps} title="Progress" />
 
         {resultTxs.length > 0 && (
           <div className="mt-6 p-4 bg-green-900/10 border border-green-500/20 rounded-lg">
-            <p className="text-[10px] text-green-500 font-bold uppercase text-center mb-3">
-              ✅ Transferência Concluída
-            </p>
+            <p className="text-[10px] text-green-500 font-bold uppercase text-center mb-3">✅ Transfer Complete</p>
             <div className="space-y-2">
               {resultTxs.map((tx, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-black/20 px-3 py-2 rounded-lg">

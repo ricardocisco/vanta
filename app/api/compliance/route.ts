@@ -3,9 +3,6 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const { address } = await req.json();
 
-  // Removido: endereço hardcoded para testes
-  // address = "TVacWx7F5wgMgn49L5frDf9KLgdYy8nPHL";
-
   if (!address) {
     return NextResponse.json({ allowed: false, error: "Address is required" }, { status: 400 });
   }
@@ -24,15 +21,12 @@ export async function POST(req: Request) {
     });
 
     if (!response.ok) {
-      console.error(">>>> RANGE API Error:", response.status, response.statusText);
       return NextResponse.json({ allowed: false, error: "Risk check failed" }, { status: response.status });
     }
 
     const data = await response.json();
 
-    console.log(">>>> RESPOSTA DA RANGE API:", data);
-
-    // Nova estrutura: riskScore (0-10) e riskLevel como string descritiva
+    // New structure: riskScore (0-10) and riskLevel as descriptive string
     // Ex: "CRITICAL RISK (Directly malicious)", "HIGH RISK", etc.
     const isHighRisk =
       data.riskScore >= 7 ||
