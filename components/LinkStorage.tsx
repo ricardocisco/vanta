@@ -5,7 +5,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Keypair, Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
-import { FolderOpen, Lock, RotateCw, Save, ScrollText } from "lucide-react";
+import { FolderOpen, Lock, RotateCw, Save, ScrollText, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function LinkHistory() {
   const { connection } = useConnection();
@@ -14,6 +14,7 @@ export default function LinkHistory() {
 
   const [links, setLinks] = useState<any[]>([]);
   const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [isOpen, setIsOpen] = useState(false); // Collapsed by default
 
   const loadLinks = useCallback(async () => {
     const saved = JSON.parse(localStorage.getItem("vanta_link_history") || "[]");
@@ -186,120 +187,135 @@ export default function LinkHistory() {
     );
 
   return (
-    <div className="w-full max-w-md mx-auto mt-8 bg-[#0F1115] border border-gray-800 rounded-2xl p-6">
-      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-800">
-        <h3 className="text-white font-bold flex items-center gap-2">
+    <div className="w-full max-w-md mx-auto mt-8 bg-[#0F1115] border border-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
+      {/* Header clicável para abrir/fechar */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex flex-wrap justify-between items-center p-4 sm:p-6 border-b border-gray-800 bg-gray-900/50 hover:bg-gray-800/50 transition-colors gap-y-3"
+      >
+        <h3 className="text-white font-bold flex items-center gap-2 text-sm sm:text-base">
+          {isOpen ? (
+            <ChevronUp size={18} className="text-gray-400" />
+          ) : (
+            <ChevronDown size={18} className="text-gray-400" />
+          )}
           <span>
-            <ScrollText />
+            <ScrollText size={18} />
           </span>{" "}
-          History
+          History <span className="text-xs text-gray-500 font-normal">({links.length})</span>
         </h3>
-        <div className="flex gap-2">
-          <button
-            onClick={handleExport}
-            className="flex items-center text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded gap-2 cursor-pointer"
-          >
-            <span>
-              <Save size={16} />
-            </span>
-            Backup
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded gap-2 cursor-pointer"
-          >
-            <span>
-              <FolderOpen size={16} />
-            </span>
-            Restore
-          </button>
-          <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
-          <button
-            onClick={loadLinks}
-            className="text-[10px] bg-gray-800 text-purple-400 px-2 py-1 rounded cursor-pointer"
-          >
-            <span>
-              <RotateCw />
-            </span>
-          </button>
-        </div>
-      </div>
 
-      <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
-        {links.map((link) => (
-          <div
-            key={link.id}
-            className={`bg-gray-900 p-3 rounded-lg border flex justify-between items-center hover:border-gray-700 transition-all ${
-              link.status === "partial" ? "border-orange-500/50" : "border-gray-800"
-            }`}
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-white text-sm">
-                  {link.amount} {link.symbol}
-                </span>
-                {link.status === "partial" ? (
-                  <span className="text-[9px] bg-orange-900/30 text-orange-400 px-1.5 py-0.5 rounded font-bold animate-pulse">
-                    ⚠️ RECOVER
-                  </span>
-                ) : link.status === "pending" ? (
-                  <span className="text-[9px] bg-blue-900/30 text-blue-400 px-1.5 py-0.5 rounded font-bold">
-                    PENDING
-                  </span>
-                ) : link.isActive ? (
-                  <span className="text-[9px] bg-yellow-900/30 text-yellow-500 px-1.5 py-0.5 rounded font-bold">
-                    ACTIVE
-                  </span>
-                ) : (
-                  <span className="text-[9px] bg-green-900/30 text-green-500 px-1.5 py-0.5 rounded font-bold">
-                    CLAIMED
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] text-gray-500 mt-1">{new Date(link.createdAt).toLocaleString()}</p>
-              {link.status === "partial" && (
-                <p className="text-[9px] text-orange-400 mt-1">Funds in temp wallet. Click ✕ to recover.</p>
-              )}
-            </div>
+        {/* Controles visíveis apenas quando aberto, ou sempre? Vamos deixar visíveis no header se couber, mas o clique propaga. 
+            Melhor: Header apenas título e seta. Controles dentro. */}
+      </button>
 
-            <div className="flex gap-2">
-              {link.isActive || link.status === "partial" ? (
-                <>
-                  {link.status !== "partial" && (
-                    <button
-                      onClick={() => copyLink(link)}
-                      className="p-2 bg-blue-900/20 text-blue-400 rounded hover:bg-blue-900/40"
-                      title="Copy"
-                    >
-                      📋
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleRefund(link)}
-                    disabled={loadingId === link.id}
-                    className={`p-2 rounded ${
-                      link.status === "partial"
-                        ? "bg-orange-900/30 text-orange-400 hover:bg-orange-900/50"
-                        : "bg-red-900/20 text-red-400 hover:bg-red-900/40"
-                    }`}
-                    title={link.status === "partial" ? "Recover Funds" : "Cancel"}
-                  >
-                    {loadingId === link.id ? "..." : link.status === "partial" ? "🔄" : "✕"}
-                  </button>
-                </>
-              ) : (
-                <span className="text-[10px] text-gray-600 italic px-2">Completed</span>
-              )}
-            </div>
+      {/* Conteúdo Expansível */}
+      {isOpen && (
+        <div className="p-4 sm:p-6 animate-in slide-in-from-top-2 fade-in duration-200">
+          {/* Controles */}
+          <div className="flex justify-end gap-2 mb-4">
+            <button
+              onClick={handleExport}
+              className="flex items-center text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded gap-2 cursor-pointer hover:bg-gray-700"
+            >
+              <Save size={14} /> Backup
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center text-[10px] bg-gray-800 text-gray-300 px-2 py-1 rounded gap-2 cursor-pointer hover:bg-gray-700"
+            >
+              <FolderOpen size={14} /> Restore
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
+            <button
+              onClick={loadLinks}
+              className="text-[10px] bg-gray-800 text-purple-400 px-2 py-1 rounded cursor-pointer hover:bg-gray-700"
+            >
+              <RotateCw size={14} />
+            </button>
           </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-center mt-4 gap-2">
-        <span>
-          <Lock size={16} />
-        </span>{" "}
-        <p className="text-xs text-center">Data stored locally.</p>
-      </div>
+
+          <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
+            {links.map((link) => (
+              <div
+                key={link.id}
+                className={`bg-gray-900 p-3 rounded-lg border flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-2 hover:border-gray-700 transition-all ${
+                  link.status === "partial" ? "border-orange-500/50" : "border-gray-800"
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-white text-sm whitespace-nowrap">
+                      {link.amount} {link.symbol}
+                    </span>
+                    {link.status === "partial" ? (
+                      <span className="text-[9px] bg-orange-900/30 text-orange-400 px-1.5 py-0.5 rounded font-bold animate-pulse whitespace-nowrap">
+                        ⚠️ RECOVER
+                      </span>
+                    ) : link.status === "pending" ? (
+                      <span className="text-[9px] bg-blue-900/30 text-blue-400 px-1.5 py-0.5 rounded font-bold whitespace-nowrap">
+                        PENDING
+                      </span>
+                    ) : link.isActive ? (
+                      <span className="text-[9px] bg-yellow-900/30 text-yellow-500 px-1.5 py-0.5 rounded font-bold whitespace-nowrap">
+                        ACTIVE
+                      </span>
+                    ) : (
+                      <span className="text-[9px] bg-green-900/30 text-green-500 px-1.5 py-0.5 rounded font-bold whitespace-nowrap">
+                        CLAIMED
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1 font-mono truncate">
+                    {new Date(link.createdAt).toLocaleString()}
+                  </p>
+                  {link.status === "partial" && (
+                    <p className="text-[9px] text-orange-400 mt-1 wrap-break-word">
+                      Funds in temp wallet. Click ✕ to recover.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 justify-end sm:justify-start">
+                  {link.isActive || link.status === "partial" ? (
+                    <>
+                      {link.status !== "partial" && (
+                        <button
+                          onClick={() => copyLink(link)}
+                          className="p-2 bg-blue-900/20 text-blue-400 rounded hover:bg-blue-900/40"
+                          title="Copy"
+                        >
+                          📋
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRefund(link)}
+                        disabled={loadingId === link.id}
+                        className={`p-2 rounded ${
+                          link.status === "partial"
+                            ? "bg-orange-900/30 text-orange-400 hover:bg-orange-900/50"
+                            : "bg-red-900/20 text-red-400 hover:bg-red-900/40"
+                        }`}
+                        title={link.status === "partial" ? "Recover Funds" : "Cancel"}
+                      >
+                        {loadingId === link.id ? "..." : link.status === "partial" ? "🔄" : "✕"}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-gray-600 italic px-2">Completed</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-center mt-4 gap-2">
+            <span>
+              <Lock size={16} />
+            </span>{" "}
+            <p className="text-xs text-center">Data stored locally.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

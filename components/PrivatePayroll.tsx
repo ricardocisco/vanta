@@ -9,7 +9,6 @@ import { ComplianceBadge } from "./ui/ComplianceBadge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { PrivacyEducation } from "./PrivacyEducation";
 import { ProcessStatus } from "./ProcessStatus";
 import { TokenOption } from "@/lib/tokens";
 import { getTokenFeePercentage } from "@/lib/fees";
@@ -243,8 +242,6 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
             {formError}
           </div>
         )}
-
-        <PrivacyEducation sender={publicKey?.toBase58()} />
       </div>
 
       {/* Coluna Direita: Status usando ProcessStatus unificado */}

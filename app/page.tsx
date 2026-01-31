@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import ShadowTerminal from "./ShadowTerminal";
+import { PrivacyEducation } from "@/components/PrivacyEducation";
 
 // Mantemos o botão da carteira dinâmico (obrigatório no Next.js + Solana)
 const WalletMultiButton = dynamic(
@@ -32,6 +33,11 @@ export default function Home() {
       {/* --- SHADOW TERMINAL --- */}
       <div className="w-full flex justify-center animate-fade-in-up">
         <ShadowTerminal />
+      </div>
+
+      {/* --- SURVEILLANCE EDUCATION (Encrypt.trade Track 1 & 2) --- */}
+      <div className="w-full max-w-3xl mx-auto">
+        <PrivacyEducation />
       </div>
 
       {/* --- FOOTER --- */}
