@@ -135,7 +135,7 @@ export const PrivacyEducation = () => {
           uniqueInteractions: estimatedUnique,
           oldestTxDays,
           hasTokenActivity: signatures.length > 5,
-          recentTxs,
+          recentTxs: recentTxs.map((tx) => ({ ...tx, blockTime: tx.blockTime ?? null })),
           interactedAddresses: Array.from(uniqueAddresses)
         });
       } catch (e) {

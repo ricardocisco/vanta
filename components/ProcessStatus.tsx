@@ -1,5 +1,3 @@
-import React from "react";
-
 type StepStatus = "pending" | "loading" | "success" | "error";
 
 interface ProcessStep {
