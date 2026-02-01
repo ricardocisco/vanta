@@ -85,6 +85,40 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
     });
   };
 
+  const handleCheckWallet = async () => {
+    if (!recipient) return setFormError("Enter address to verify.");
+    try {
+      new PublicKey(recipient);
+    } catch {
+      return setFormError("Invalid address format.");
+    }
+
+    setComplianceStatus("loading");
+    setFormError(null);
+
+    try {
+      const res = await fetch("/api/compliance", {
+        method: "POST",
+        body: JSON.stringify({ address: recipient })
+      });
+      const data = await res.json();
+
+      if (!data.allowed) {
+        setComplianceStatus("risk");
+        const riskInfo = data.detail;
+        const riskMessage = riskInfo?.riskLevel || data.reason || "High Risk";
+
+        setFormError(`⚠️ Wallet Flagged: ${riskMessage}`);
+      } else {
+        setComplianceStatus("safe");
+      }
+    } catch (e) {
+      console.error(e);
+      setComplianceStatus("idle");
+      setFormError("Failed to verify wallet.");
+    }
+  };
+
   const handlePay = async () => {
     setFormError(null);
     if (!connected || !publicKey || !signMessage) return setFormError("Connect your wallet.");
@@ -188,13 +222,25 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
         {/* Recipient Input */}
         <div>
           <Label className="text-xs text-gray-500 uppercase font-bold">Recipient</Label>
-          <Input
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            placeholder="Solana Address..."
-            className="w-full mt-2 bg-gray-900 border border-gray-700 p-3 h-11 rounded text-white focus:border-purple-500 font-mono text-sm"
-          />
-          <div className="mt-2 h-6">
+          <div className="flex gap-2 mt-2">
+            <Input
+              value={recipient}
+              onChange={(e) => {
+                setRecipient(e.target.value);
+                setComplianceStatus("idle"); // Reset status on change
+              }}
+              placeholder="Solana Address..."
+              className="w-full bg-gray-900 border border-gray-700 p-3 h-11 rounded text-white focus:border-purple-500 font-mono text-sm"
+            />
+            <Button
+              onClick={handleCheckWallet}
+              disabled={!recipient || complianceStatus === "loading"}
+              className="h-11 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 font-bold"
+            >
+              Verify
+            </Button>
+          </div>
+          <div className="mt-2 h-6 flex justify-between items-center">
             <ComplianceBadge status={complianceStatus} />
           </div>
         </div>
@@ -244,7 +290,6 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
         )}
       </div>
 
-      {/* Coluna Direita: Status usando ProcessStatus unificado */}
       <div className="w-full md:w-1/3 md:border-l border-gray-800 md:pl-6 pt-6 md:pt-0">
         <ProcessStatus steps={processSteps} title="Progress" />
 

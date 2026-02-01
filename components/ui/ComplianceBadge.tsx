@@ -1,8 +1,4 @@
-export const ComplianceBadge = ({
-  status
-}: {
-  status: "idle" | "loading" | "safe" | "risk";
-}) => {
+export const ComplianceBadge = ({ status }: { status: "idle" | "loading" | "safe" | "risk" }) => {
   if (status === "idle") return null;
 
   return (
@@ -21,10 +17,10 @@ export const ComplianceBadge = ({
 
       <span className="font-bold">
         {status === "loading"
-          ? "Verificando Range API..."
+          ? "Checking Range API..."
           : status === "safe"
-            ? "Carteira Segura (Range Verified)"
-            : "Risco Detectado!"}
+            ? "Wallet Safe (Range Verified)"
+            : "Risk Detected!"}
       </span>
     </div>
   );
