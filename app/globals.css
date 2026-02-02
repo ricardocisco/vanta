@@ -48,72 +48,82 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Fundo e Texto */
+  --background: hsl(0 0% 0%); /* #000000 - True Vanta Black */
+  --foreground: hsl(0 0% 90%); /* #E5E5E5 - Texto Principal */
+
+  /* Superficies (Cartoes, Modais, etc.) */
+  --card: hsl(0 0% 3%); /* #080808 - Quase preto absoluto */
+  --card-foreground: hsl(0 0% 90%);
+  --popover: hsl(0 0% 3%);
+  --popover-foreground: hsl(0 0% 90%);
+
+  /* Cor Primaria (Verde Neon) */
+  --primary: hsl(135 100% 50%); /* #00FF41 */
+  --primary-foreground: hsl(0 0% 0%); /* Texto preto sobre verde neon */
+
+  /* Cor Secundaria (Roxo Eletrico) */
+  --secondary: hsl(277 100% 50%); /* #9D00FF */
+  --secondary-foreground: hsl(0 0% 100%); /* Texto branco sobre roxo */
+
+  /* Cores de Acao e Estado */
+  --muted: hsl(0 0% 15%);
+  --muted-foreground: hsl(0 0% 63%);
+  --accent: hsl(0 0% 15%); /* Cor de hover em itens de menu */
+  --accent-foreground: hsl(0 0% 88%);
+
+  --destructive: hsl(0 100% 50%); /* Vermelho padrao para erros */
+  --destructive-foreground: hsl(0 0% 100%);
+
+  /* Bordas e Inputs */
+  --border: hsl(0 0% 15%); /* Bordas sutis */
+  --input: hsl(0 0% 15%); /* Fundo de inputs */
+  --ring: hsl(135 100% 50%); /* Anel de foco (Verde Neon) */
+
+  /* Arredondamento */
+  --radius: 0.5rem;
+
+  /* Charts and Sidebar compatibility */
+  --chart-1: hsl(135 100% 50%);
+  --chart-2: hsl(277 100% 50%);
+  --chart-3: hsl(0 0% 15%);
+  --chart-4: hsl(0 0% 63%);
+  --chart-5: hsl(0 0% 88%);
+
+  --sidebar: hsl(0 0% 4%);
+  --sidebar-foreground: hsl(0 0% 88%);
+  --sidebar-primary: hsl(135 100% 50%);
+  --sidebar-primary-foreground: hsl(0 0% 0%);
+  --sidebar-accent: hsl(0 0% 15%);
+  --sidebar-accent-foreground: hsl(0 0% 88%);
+  --sidebar-border: hsl(0 0% 15%);
+  --sidebar-ring: hsl(135 100% 50%);
+}
+
+@keyframes neon-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 5px hsl(135 100% 50% / 0.5),
+      0 0 10px hsl(135 100% 50% / 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 15px hsl(135 100% 50% / 0.8),
+      0 0 25px hsl(135 100% 50% / 0.5);
+  }
+}
+
+.animate-neon-pulse {
+  animation: neon-pulse 3s ease-in-out infinite;
+}
+
+.neon-shadow {
+  box-shadow: 0 0 10px hsl(135 100% 50% / 0.4);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Vanta Design System uses :root for all colors */
 }
 
 @layer base {
@@ -135,20 +145,20 @@
     height: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.4);
     border-radius: 3px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #7c3aed 0%, #4f46e5 100%);
+    background: linear-gradient(180deg, #00ff41 0%, #9d00ff 100%);
     border-radius: 3px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #8b5cf6 0%, #6366f1 100%);
+    background: linear-gradient(180deg, #33ff66 0%, #b033ff 100%);
   }
 
   /* Firefox */
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #7c3aed rgba(0, 0, 0, 0.2);
+    scrollbar-color: #9d00ff rgba(0, 0, 0, 0.4);
   }
 }

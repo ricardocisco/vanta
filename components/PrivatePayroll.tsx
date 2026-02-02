@@ -5,13 +5,15 @@ import { useState, useEffect } from "react";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { ShadowWireClient, SUPPORTED_TOKENS as SDK_TOKENS } from "@radr/shadowwire";
+import { Card, CardContent } from "@/components/ui/card";
 import { ComplianceBadge } from "./ui/ComplianceBadge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { ProcessStatus } from "./ProcessStatus";
+import { ProcessStatus, ProcessStep } from "./ProcessStatus";
 import { TokenOption } from "@/lib/tokens";
 import { getTokenFeePercentage } from "@/lib/fees";
+import { Check, ShieldCheck, Lock, Send } from "lucide-react";
 
 // SDK Token Type
 type SdkTokenType = (typeof SDK_TOKENS)[number];
@@ -22,9 +24,6 @@ interface PrivatePayrollProps {
   privateBalance: number;
   onSuccess: () => void; // Para atualizar saldo após envio
 }
-
-// Type compatible with ProcessStatus
-type ProcessStep = { id: string; label: string; status: "pending" | "loading" | "success" | "error"; detail?: string };
 
 export default function PrivatePayroll({ selectedToken, privateBalance, onSuccess }: PrivatePayrollProps) {
   const { publicKey, signMessage, connected, sendTransaction } = useWallet();
@@ -57,9 +56,9 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
   // Steps Visuais - Usando formato compatível com ProcessStatus
   const [complianceStatus, setComplianceStatus] = useState<"idle" | "loading" | "safe" | "risk">("idle");
   const [processSteps, setProcessSteps] = useState<ProcessStep[]>([
-    { id: "compliance", label: "Range Validation", status: "pending" },
-    { id: "zkproof", label: "ZK Proof (Radr)", status: "pending" },
-    { id: "relayer", label: "Relayer (Helius)", status: "pending" }
+    { id: "compliance", label: "Range Validation", status: "pending", icon: ShieldCheck },
+    { id: "zkproof", label: "ZK Proof (Radr)", status: "pending", icon: Lock },
+    { id: "relayer", label: "Relayer (Helius)", status: "pending", icon: Send }
   ]);
 
   // Fee Estimate Calculation
@@ -218,84 +217,96 @@ export default function PrivatePayroll({ selectedToken, privateBalance, onSucces
   return (
     <div className="flex flex-col md:flex-row gap-8 animate-fade-in">
       {/* Coluna Esquerda: Form */}
-      <div className="flex-1 space-y-5">
-        {/* Recipient Input */}
-        <div>
-          <Label className="text-xs text-gray-500 uppercase font-bold">Recipient</Label>
-          <div className="flex gap-2 mt-2">
-            <Input
-              value={recipient}
-              onChange={(e) => {
-                setRecipient(e.target.value);
-                setComplianceStatus("idle"); // Reset status on change
-              }}
-              placeholder="Solana Address..."
-              className="w-full bg-gray-900 border border-gray-700 p-3 h-11 rounded text-white focus:border-purple-500 font-mono text-sm"
-            />
-            <Button
-              onClick={handleCheckWallet}
-              disabled={!recipient || complianceStatus === "loading"}
-              className="h-11 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 font-bold"
-            >
-              Verify
-            </Button>
+      <Card className="flex-1 border-none shadow-none bg-transparent p-0">
+        <CardContent className="space-y-5 p-0">
+          {/* Recipient Input */}
+          <div>
+            <Label className="text-xs text-muted-foreground uppercase font-bold">Recipient</Label>
+            <div className="flex gap-2 mt-2">
+              <Input
+                value={recipient}
+                onChange={(e) => {
+                  setRecipient(e.target.value);
+                  setComplianceStatus("idle"); // Reset status on change
+                }}
+                placeholder="Solana Address..."
+                className="w-full bg-input border-border p-3 h-11 rounded text-foreground focus:border-primary font-mono text-sm"
+              />
+              <Button
+                onClick={handleCheckWallet}
+                disabled={!recipient || complianceStatus === "loading"}
+                variant="outline"
+                className="h-11 border-border font-bold"
+              >
+                Verify
+              </Button>
+            </div>
+            <div className="mt-2 h-6 flex justify-between items-center">
+              <ComplianceBadge status={complianceStatus} />
+            </div>
           </div>
-          <div className="mt-2 h-6 flex justify-between items-center">
-            <ComplianceBadge status={complianceStatus} />
+
+          {/* Amount Input */}
+          <div>
+            <Label className="text-xs text-muted-foreground uppercase font-bold flex justify-between">
+              <span>Amount ({selectedToken.symbol})</span>
+              <span className="text-muted-foreground/80">
+                Avail: {(privateBalance - Number(feeEstimate)).toFixed(4)}
+              </span>
+            </Label>
+            <div className="relative mt-2">
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full bg-input border-border p-3 h-11 rounded text-foreground focus:border-primary pr-16"
+              />
+              <Button
+                onClick={() => {
+                  const feePct = getTokenFeePercentage(selectedToken.symbol);
+                  const max = privateBalance / (1 + feePct);
+                  setAmount(max.toFixed(selectedToken.decimals));
+                }}
+                size="sm"
+                variant="secondary"
+                className="absolute right-2 top-1.5 h-8 text-[10px] bg-secondary/20 hover:bg-secondary/40 text-secondary font-bold"
+              >
+                MAX
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Fee: ~{feeEstimate} {selectedToken.symbol}
+            </p>
           </div>
-        </div>
 
-        {/* Amount Input */}
-        <div>
-          <Label className="text-xs text-gray-500 uppercase font-bold flex justify-between">
-            <span>Amount ({selectedToken.symbol})</span>
-            <span className="text-gray-400">Avail: {(privateBalance - Number(feeEstimate)).toFixed(4)}</span>
-          </Label>
-          <div className="relative mt-2">
-            <Input
-              type="number"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-700 p-3 h-11 rounded text-white focus:border-purple-500"
-            />
-            <Button
-              onClick={() => {
-                const feePct = getTokenFeePercentage(selectedToken.symbol);
-                const max = privateBalance / (1 + feePct);
-                setAmount(max.toFixed(selectedToken.decimals));
-              }}
-              className="absolute right-3 top-1 text-xs bg-purple-900/50 px-2 py-1 rounded text-purple-300 font-bold hover:bg-purple-900"
-            >
-              MAX
-            </Button>
-          </div>
-          <p className="text-[10px] text-gray-500 mt-1">
-            Fee: ~{feeEstimate} {selectedToken.symbol}
-          </p>
-        </div>
+          <Button
+            onClick={handlePay}
+            disabled={loading || Number(amount) <= 0}
+            className="w-full py-6 hover:brightness-110 text-primary-foreground rounded-lg font-bold shadow-[0_0_20px_hsl(135,100%,50%,0.3)] hover:shadow-[0_0_30px_hsl(135,100%,50%,0.5)] transition-shadow"
+          >
+            {loading ? "Processing..." : "Send Payment"}
+          </Button>
 
-        <Button
-          onClick={handlePay}
-          disabled={loading || Number(amount) <= 0}
-          className="w-full py-6 bg-linear-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white rounded-lg font-bold shadow-lg"
-        >
-          {loading ? "Processing..." : "💸 Send Secure Payment"}
-        </Button>
+          {formError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded text-center text-destructive text-xs font-bold">
+              {formError}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {formError && (
-          <div className="p-3 bg-red-900/20 border border-red-500/30 rounded text-center text-red-400 text-xs font-bold">
-            {formError}
-          </div>
-        )}
-      </div>
-
-      <div className="w-full md:w-1/3 md:border-l border-gray-800 md:pl-6 pt-6 md:pt-0">
+      <div className="w-full md:w-1/3 md:border-l border-separate md:pl-6 pt-6 md:pt-0">
         <ProcessStatus steps={processSteps} title="Progress" />
 
         {resultTxs.length > 0 && (
-          <div className="mt-6 p-4 bg-green-900/10 border border-green-500/20 rounded-lg">
-            <p className="text-[10px] text-green-500 font-bold uppercase text-center mb-3">✅ Transfer Complete</p>
+          <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+            <p className="text-[10px] text-primary font-bold uppercase text-center mb-3">
+              <span>
+                <Check />
+              </span>
+              Transfer Complete
+            </p>
             <div className="space-y-2">
               {resultTxs.map((tx, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-black/20 px-3 py-2 rounded-lg">

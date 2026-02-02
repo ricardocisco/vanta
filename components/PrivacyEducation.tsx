@@ -2,6 +2,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Eye,
   EyeOff,
@@ -151,26 +153,26 @@ export const PrivacyEducation = () => {
   // Don't show if no wallet connected
   if (!publicKey) {
     return (
-      <div className="mt-8 rounded-2xl overflow-hidden border border-gray-800 bg-linear-to-br from-[#0a0a0a] to-[#111] p-6">
+      <Card className="mt-8 p-6">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gray-800/50 flex items-center justify-center">
-            <Eye className="text-gray-500" size={24} />
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+            <Eye className="text-muted-foreground" size={24} />
           </div>
           <div>
-            <h4 className="text-gray-300 font-bold text-sm">Surveillance Analysis</h4>
-            <p className="text-xs text-gray-500">Connect your wallet to see your exposure level</p>
+            <h4 className="font-bold text-sm text-foreground">Surveillance Analysis</h4>
+            <p className="text-xs text-muted-foreground">Connect your wallet to see your exposure level</p>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="mt-8 rounded-2xl overflow-hidden border border-gray-800 bg-linear-to-br from-[#0a0a0a] to-[#111] transition-all">
+    <Card className="mt-8 overflow-hidden transition-all">
       {/* HEADER - Always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-5 flex justify-between items-center hover:bg-white/2 transition-colors"
+        className="w-full p-5 flex justify-between items-center hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center gap-4">
           {/* Animated Eye Icon */}
@@ -178,10 +180,10 @@ export const PrivacyEducation = () => {
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center ${
                 surveillanceScore >= 60
-                  ? "bg-red-900/30"
+                  ? "bg-red-500/20"
                   : surveillanceScore >= 40
-                    ? "bg-yellow-900/30"
-                    : "bg-green-900/30"
+                    ? "bg-yellow-500/20"
+                    : "bg-green-500/20"
               }`}
             >
               <Eye className={surveillanceLevel.color} size={24} />
@@ -194,19 +196,21 @@ export const PrivacyEducation = () => {
 
           <div className="text-left">
             <div className="flex items-center gap-2">
-              <h4 className="text-white font-bold text-sm">Encrypt.trade</h4>
-              <span className="text-[10px] bg-gray-800 px-2 py-0.5 rounded text-gray-400">Surveillance Analysis</span>
+              <h4 className="font-bold text-sm">Encrypt.trade</h4>
+              <span className="text-[10px] bg-muted px-2 py-0.5 rounded text-muted-foreground">
+                Surveillance Analysis
+              </span>
             </div>
             <div className="flex items-center gap-3 mt-1">
               {isLoading ? (
-                <span className="text-xs text-gray-500 animate-pulse">Analyzing your exposure...</span>
+                <span className="text-xs text-muted-foreground animate-pulse">Analyzing your exposure...</span>
               ) : (
                 <>
                   <span className={`text-xs font-bold ${surveillanceLevel.color}`}>
                     {surveillanceLevel.level} EXPOSURE
                   </span>
-                  <span className="text-xs text-gray-500">•</span>
-                  <span className="text-xs text-gray-400">Score: {surveillanceScore}/100</span>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <span className="text-xs text-muted-foreground">Score: {surveillanceScore}/100</span>
                 </>
               )}
             </div>
@@ -216,7 +220,7 @@ export const PrivacyEducation = () => {
         <div className="flex items-center gap-3">
           {/* Mini score bar */}
           <div className="hidden sm:flex items-center gap-2">
-            <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${
                   surveillanceScore >= 80
@@ -232,97 +236,97 @@ export const PrivacyEducation = () => {
             </div>
           </div>
           {expanded ? (
-            <ChevronUp className="text-gray-500" size={20} />
+            <ChevronUp className="text-muted-foreground" size={20} />
           ) : (
-            <ChevronDown className="text-gray-500" size={20} />
+            <ChevronDown className="text-muted-foreground" size={20} />
           )}
         </div>
       </button>
 
       {/* EXPANDED CONTENT */}
       {expanded && (
-        <div className="border-t border-gray-800 animate-in fade-in slide-in-from-top-2 duration-300">
+        <CardContent className="p-0 border-t">
           {/* TRACK 1: The Problem - Surveillance Exposure */}
-          <div className="p-5 border-b border-gray-800">
+          <div className="p-5 border-b">
             <div className="flex items-center gap-2 mb-4">
-              <TriangleAlert className="text-red-400" size={18} />
-              <h5 className="text-red-400 font-bold text-xs uppercase tracking-wider">
+              <TriangleAlert className="text-destructive" size={18} />
+              <h5 className="text-destructive font-bold text-xs uppercase tracking-wider">
                 What The Blockchain Reveals About You
               </h5>
             </div>
 
             {/* Surveillance Metrics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              <div className="bg-black/40 border border-gray-800 rounded-xl p-3">
+              <div className="bg-muted/50 border rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Wallet className="text-gray-500" size={14} />
-                  <span className="text-[10px] text-gray-500 uppercase">Balance</span>
+                  <Wallet className="text-muted-foreground" size={14} />
+                  <span className="text-[10px] text-muted-foreground uppercase">Balance</span>
                 </div>
-                <p className="text-lg font-bold text-white font-mono">{publicData.balance.toFixed(2)}</p>
-                <p className="text-[10px] text-gray-500">SOL visible</p>
+                <p className="text-lg font-bold font-mono">{publicData.balance.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground">SOL visible</p>
               </div>
 
-              <div className="bg-black/40 border border-gray-800 rounded-xl p-3">
+              <div className="bg-muted/50 border rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Activity className="text-gray-500" size={14} />
-                  <span className="text-[10px] text-gray-500 uppercase">Activity</span>
+                  <Activity className="text-muted-foreground" size={14} />
+                  <span className="text-[10px] text-muted-foreground uppercase">Activity</span>
                 </div>
-                <p className="text-lg font-bold text-white font-mono">{publicData.txCount}+</p>
-                <p className="text-[10px] text-gray-500">Transactions</p>
+                <p className="text-lg font-bold font-mono">{publicData.txCount}+</p>
+                <p className="text-[10px] text-muted-foreground">Transactions</p>
               </div>
 
-              <div className="bg-black/40 border border-gray-800 rounded-xl p-3">
+              <div className="bg-muted/50 border rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Network className="text-gray-500" size={14} />
-                  <span className="text-[10px] text-gray-500 uppercase">Network</span>
+                  <Network className="text-muted-foreground" size={14} />
+                  <span className="text-[10px] text-muted-foreground uppercase">Network</span>
                 </div>
-                <p className="text-lg font-bold text-white font-mono">{publicData.uniqueInteractions}</p>
-                <p className="text-[10px] text-gray-500">Connections</p>
+                <p className="text-lg font-bold font-mono">{publicData.uniqueInteractions}</p>
+                <p className="text-[10px] text-muted-foreground">Connections</p>
               </div>
 
-              <div className="bg-black/40 border border-gray-800 rounded-xl p-3">
+              <div className="bg-muted/50 border rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Clock className="text-gray-500" size={14} />
-                  <span className="text-[10px] text-gray-500 uppercase">Age</span>
+                  <Clock className="text-muted-foreground" size={14} />
+                  <span className="text-[10px] text-muted-foreground uppercase">Age</span>
                 </div>
-                <p className="text-lg font-bold text-white font-mono">{publicData.oldestTxDays}</p>
-                <p className="text-[10px] text-gray-500">Days tracked</p>
+                <p className="text-lg font-bold font-mono">{publicData.oldestTxDays}</p>
+                <p className="text-[10px] text-muted-foreground">Days tracked</p>
               </div>
             </div>
 
             {/* What This Means */}
-            <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-4">
-              <h6 className="text-red-400 font-bold text-xs mb-3 flex items-center gap-2">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4">
+              <h6 className="text-destructive font-bold text-xs mb-3 flex items-center gap-2">
                 <Fingerprint size={14} />
                 What trackers can see:
               </h6>
-              <ul className="space-y-2 text-xs text-gray-300">
+              <ul className="space-y-2 text-xs text-muted-foreground">
                 <li className="flex items-start gap-2">
-                  <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={12} />
+                  <AlertCircle className="text-destructive shrink-0 mt-0.5" size={12} />
                   <span>
                     Every transaction you&apos;ve ever made is{" "}
-                    <strong className="text-red-400">permanently recorded</strong>
+                    <strong className="text-destructive">permanently recorded</strong>
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={12} />
+                  <AlertCircle className="text-destructive shrink-0 mt-0.5" size={12} />
                   <span>
                     Your wallet can be linked to{" "}
-                    <strong className="text-red-400">exchanges, social profiles, and IP addresses</strong>
+                    <strong className="text-destructive">exchanges, social profiles, and IP addresses</strong>
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={12} />
+                  <AlertCircle className="text-destructive shrink-0 mt-0.5" size={12} />
                   <span>
-                    Platforms like <strong className="text-red-400">Arkham, Nansen, and 0xScope</strong> cluster and
+                    Platforms like <strong className="text-destructive">Arkham, Nansen, and 0xScope</strong> cluster and
                     label wallets
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={12} />
+                  <AlertCircle className="text-destructive shrink-0 mt-0.5" size={12} />
                   <span>
-                    A single public transaction <strong className="text-red-400">permanently links</strong> sender and
-                    receiver
+                    A single public transaction <strong className="text-destructive">permanently links</strong> sender
+                    and receiver
                   </span>
                 </li>
               </ul>
@@ -333,7 +337,7 @@ export const PrivacyEducation = () => {
                   href={`https://solscan.io/account/${publicKey.toBase58()}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] bg-black/50 border border-gray-700 px-2 py-1 rounded flex items-center gap-1 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+                  className="text-[10px] bg-background/50 border px-2 py-1 rounded flex items-center gap-1 text-muted-foreground hover:text-foreground hover:border-gray-500 transition-colors"
                 >
                   <Globe size={10} /> Solscan
                   <ExternalLink size={8} />
@@ -342,7 +346,7 @@ export const PrivacyEducation = () => {
                   href={`https://solana.fm/address/${publicKey.toBase58()}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] bg-black/50 border border-gray-700 px-2 py-1 rounded flex items-center gap-1 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+                  className="text-[10px] bg-background/50 border px-2 py-1 rounded flex items-center gap-1 text-muted-foreground hover:text-foreground hover:border-gray-500 transition-colors"
                 >
                   <Globe size={10} /> Solana FM
                   <ExternalLink size={8} />
@@ -354,96 +358,96 @@ export const PrivacyEducation = () => {
           {/* TRACK 2: The Solution - How Vanta Protects You */}
           <div className="p-5">
             <div className="flex items-center gap-2 mb-4">
-              <ShieldCheck className="text-green-400" size={18} />
-              <h5 className="text-green-400 font-bold text-xs uppercase tracking-wider">
+              <ShieldCheck className="text-primary" size={18} />
+              <h5 className="text-primary font-bold text-xs uppercase tracking-wider">
                 How Vanta Protocol Protects You
               </h5>
             </div>
 
             {/* Visual Flow Diagram */}
-            <div className="bg-green-950/10 border border-green-500/20 rounded-xl p-5 mb-4">
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-4">
               <div className="flex items-center justify-between mb-6">
                 {/* Sender */}
                 <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-full bg-red-900/30 border-2 border-red-500/50 flex items-center justify-center mb-2">
-                    <User className="text-red-400" size={24} />
+                  <div className="w-14 h-14 rounded-full bg-destructive/20 border-2 border-destructive/50 flex items-center justify-center mb-2">
+                    <User className="text-destructive" size={24} />
                   </div>
-                  <span className="text-xs font-bold text-red-400">You</span>
-                  <span className="text-[9px] text-gray-500">Exposed</span>
+                  <span className="text-xs font-bold text-destructive">You</span>
+                  <span className="text-[9px] text-muted-foreground">Exposed</span>
                 </div>
 
                 {/* Arrow + ZK Break */}
                 <div className="flex-1 flex items-center justify-center relative px-4">
-                  <div className="absolute inset-x-4 top-1/2 h-0.5 bg-linear-to-r from-red-500/50 via-transparent to-green-500/50" />
-                  <div className="relative z-10 bg-[#0a0a0a] border-2 border-purple-500 rounded-full p-2">
-                    <Scissors className="text-purple-400" size={20} />
+                  <div className="absolute inset-x-4 top-1/2 h-0.5 bg-linear-to-r from-destructive/50 via-transparent to-primary/50" />
+                  <div className="relative z-10 bg-card border-2 border-secondary rounded-full p-2">
+                    <Scissors className="text-secondary" size={20} />
                   </div>
                 </div>
 
                 {/* ZK Pool */}
                 <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-full bg-purple-900/30 border-2 border-purple-500/50 flex items-center justify-center mb-2 relative">
-                    <Lock className="text-purple-400" size={24} />
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-secondary/20 border-2 border-secondary/50 flex items-center justify-center mb-2 relative">
+                    <Lock className="text-secondary" size={24} />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-secondary rounded-full flex items-center justify-center">
                       <span className="text-[8px] text-white font-bold">ZK</span>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-purple-400">Pool</span>
-                  <span className="text-[9px] text-gray-500">Anonymous</span>
+                  <span className="text-xs font-bold text-secondary">Pool</span>
+                  <span className="text-[9px] text-muted-foreground">Anonymous</span>
                 </div>
 
                 {/* Arrow + ZK Break */}
                 <div className="flex-1 flex items-center justify-center relative px-4">
-                  <div className="absolute inset-x-4 top-1/2 h-0.5 bg-linear-to-r from-purple-500/50 via-transparent to-green-500/50" />
-                  <div className="relative z-10 bg-[#0a0a0a] border-2 border-green-500 rounded-full p-2">
-                    <EyeOff className="text-green-400" size={20} />
+                  <div className="absolute inset-x-4 top-1/2 h-0.5 bg-linear-to-r from-secondary/50 via-transparent to-primary/50" />
+                  <div className="relative z-10 bg-card border-2 border-primary rounded-full p-2">
+                    <EyeOff className="text-primary" size={20} />
                   </div>
                 </div>
 
                 {/* Recipient */}
                 <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-full bg-green-900/30 border-2 border-green-500/50 flex items-center justify-center mb-2">
-                    <Gift className="text-green-400" size={24} />
+                  <div className="w-14 h-14 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center mb-2">
+                    <Gift className="text-primary" size={24} />
                   </div>
-                  <span className="text-xs font-bold text-green-400">Recipient</span>
-                  <span className="text-[9px] text-gray-500">Protected</span>
+                  <span className="text-xs font-bold text-primary">Recipient</span>
+                  <span className="text-[9px] text-muted-foreground">Protected</span>
                 </div>
               </div>
 
               {/* Explanation */}
               <div className="text-center">
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  Vanta acts as a <strong className="text-purple-400">&quot;Financial Firewall&quot;</strong>. When you
-                  send funds, they enter a <strong className="text-purple-400">Zero-Knowledge pool</strong> where the
-                  link between sender and receiver is <strong className="text-green-400">mathematically broken</strong>.
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Vanta acts as a <strong className="text-secondary">&quot;Financial Firewall&quot;</strong>. When you
+                  send funds, they enter a <strong className="text-secondary">Zero-Knowledge pool</strong> where the
+                  link between sender and receiver is <strong className="text-primary">mathematically broken</strong>.
                 </p>
               </div>
             </div>
 
             {/* Key Benefits */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="bg-black/40 border border-gray-800 rounded-xl p-3 text-center">
-                <div className="w-8 h-8 rounded-full bg-green-900/30 flex items-center justify-center mx-auto mb-2">
-                  <EyeOff className="text-green-400" size={16} />
+              <div className="bg-muted/50 border rounded-xl p-3 text-center">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                  <EyeOff className="text-primary" size={16} />
                 </div>
-                <h6 className="text-xs font-bold text-white mb-1">Unlinkable</h6>
-                <p className="text-[10px] text-gray-500">No one can trace funds back to you</p>
+                <h6 className="text-xs font-bold text-foreground mb-1">Unlinkable</h6>
+                <p className="text-[10px] text-muted-foreground">No one can trace funds back to you</p>
               </div>
 
-              <div className="bg-black/40 border border-gray-800 rounded-xl p-3 text-center">
-                <div className="w-8 h-8 rounded-full bg-green-900/30 flex items-center justify-center mx-auto mb-2">
-                  <ShieldCheck className="text-green-400" size={16} />
+              <div className="bg-muted/50 border rounded-xl p-3 text-center">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                  <ShieldCheck className="text-primary" size={16} />
                 </div>
-                <h6 className="text-xs font-bold text-white mb-1">Compliant</h6>
-                <p className="text-[10px] text-gray-500">Range Protocol checks every wallet</p>
+                <h6 className="text-xs font-bold text-foreground mb-1">Compliant</h6>
+                <p className="text-[10px] text-muted-foreground">Range Protocol checks every wallet</p>
               </div>
 
-              <div className="bg-black/40 border border-gray-800 rounded-xl p-3 text-center">
-                <div className="w-8 h-8 rounded-full bg-green-900/30 flex items-center justify-center mx-auto mb-2">
-                  <Lock className="text-green-400" size={16} />
+              <div className="bg-muted/50 border rounded-xl p-3 text-center">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                  <Lock className="text-primary" size={16} />
                 </div>
-                <h6 className="text-xs font-bold text-white mb-1">Zero-Knowledge</h6>
-                <p className="text-[10px] text-gray-500">Cryptographic privacy guarantees</p>
+                <h6 className="text-xs font-bold text-foreground mb-1">Zero-Knowledge</h6>
+                <p className="text-[10px] text-muted-foreground">Cryptographic privacy guarantees</p>
               </div>
             </div>
 
@@ -453,15 +457,15 @@ export const PrivacyEducation = () => {
                 href="https://encrypt.trade"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-purple-400 hover:text-purple-300 inline-flex items-center gap-1"
+                className="text-xs text-secondary hover:text-secondary/80 inline-flex items-center gap-1"
               >
                 Learn more about privacy on Solana
                 <ExternalLink size={12} />
               </a>
             </div>
           </div>
-        </div>
+        </CardContent>
       )}
-    </div>
+    </Card>
   );
 };

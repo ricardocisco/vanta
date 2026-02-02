@@ -2,9 +2,7 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import Image from "next/image";
-import Link from "next/link";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Keypair, Transaction, SystemProgram, PublicKey } from "@solana/web3.js";
 import {
@@ -14,15 +12,13 @@ import {
   getAccount
 } from "@solana/spl-token";
 import bs58 from "bs58";
-import { ProcessStatus } from "@/components/ProcessStatus";
+import { ProcessStatus, ProcessStep, StepStatus } from "@/components/ProcessStatus";
 import { SUPPORTED_TOKENS, TokenOption } from "@/lib/tokens";
 import { getTokenFeePercentage } from "@/lib/fees";
-import { Gift, PartyPopper, ShieldX, Sparkles } from "lucide-react";
-
-const WalletMultiButton = dynamic(
-  () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletMultiButton),
-  { ssr: false }
-);
+import { Gift, PartyPopper, ShieldX, Sparkles, Search, ShieldCheck, Download } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Navbar from "@/components/Navbar";
 
 const FEE_BUFFER = 5000;
 
@@ -47,13 +43,13 @@ function ClaimContent() {
   const [tempKeypair, setTempKeypair] = useState<Keypair | null>(null);
   const [complianceError, setComplianceError] = useState<string | null>(null);
 
-  const [steps, setSteps] = useState([
-    { id: "validate", label: "Validating Link", status: "pending" as any },
-    { id: "range", label: "Checking Compliance", status: "pending" as any },
-    { id: "transfer", label: "Gasless Transfer", status: "pending" as any }
+  const [steps, setSteps] = useState<ProcessStep[]>([
+    { id: "validate", label: "Validating Link", status: "pending", icon: Search },
+    { id: "range", label: "Checking Compliance", status: "pending", icon: ShieldCheck },
+    { id: "transfer", label: "Gasless Transfer", status: "pending", icon: Download }
   ]);
 
-  const updateStep = (id: string, status: "loading" | "success" | "error") => {
+  const updateStep = (id: string, status: StepStatus) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
   };
 
@@ -139,7 +135,7 @@ function ClaimContent() {
             (category ? `\nCategory: ${category}` : "")
         );
         setStatus("error");
-        return; // Stop flow without throw
+        return;
       }
       updateStep("range", "success");
 
@@ -162,8 +158,6 @@ function ClaimContent() {
         );
         console.log(tempKeypair?.publicKey?.toBase58());
       } else {
-        // --- SPL TOKEN: Transfer from temp wallet's ATA to receiver's ATA ---
-        // Note: "external" transfer sends to public ATA, not private balance
         const tokenInfoData = SUPPORTED_TOKENS.find((t) => t.symbol === tokenSymbol);
         if (!tokenInfoData) throw new Error("Unknown token");
 
@@ -196,25 +190,10 @@ function ClaimContent() {
         try {
           await getAccount(connection, receiverAta);
         } catch {
-          transaction.add(
-            createAssociatedTokenAccountInstruction(
-              tempKeypair.publicKey, // Payer (temp wallet pays the rent)
-              receiverAta,
-              publicKey,
-              mint
-            )
-          );
+          transaction.add(createAssociatedTokenAccountInstruction(tempKeypair.publicKey, receiverAta, publicKey, mint));
         }
 
-        // Transfer all tokens from temp ATA to receiver ATA
-        transaction.add(
-          createTransferInstruction(
-            tempAta,
-            receiverAta,
-            tempKeypair.publicKey, // Owner (temp wallet signs)
-            tokenAmount
-          )
-        );
+        transaction.add(createTransferInstruction(tempAta, receiverAta, tempKeypair.publicKey, tokenAmount));
       }
 
       // GASLESS CONFIGURATION
@@ -233,7 +212,7 @@ function ClaimContent() {
       setStatus("success");
     } catch (e: any) {
       console.error(e);
-      // Only mark transfer as error if not a compliance error (already handled)
+
       if (!complianceError) {
         updateStep("transfer", "error");
       }
@@ -243,50 +222,45 @@ function ClaimContent() {
 
   // --- UI RENDER ---
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center p-4">
       {/* Header with connect button */}
-      <div className="w-full max-w-md flex justify-between items-center mb-8 pt-4">
-        <Link href="/" className="text-purple-400 hover:text-purple-300 text-sm font-bold flex items-center gap-2">
-          👻 Vanta Protocol
-        </Link>
-        <WalletMultiButton style={{ backgroundColor: "transparent", height: "40px", fontSize: "12px" }} />
-      </div>
+      <Navbar />
 
-      <div className="max-w-md w-full bg-[#0F1115] p-8 rounded-2xl border border-gray-800 text-center relative overflow-hidden">
+      <Card className="max-w-md w-full p-8 text-center relative overflow-hidden">
         {/* Status Visual */}
         <div className="mb-4 flex justify-center">
           {status === "success" ? (
-            <PartyPopper className="w-16 h-16 text-green-400" />
+            <PartyPopper className="w-16 h-16 text-green-500" />
           ) : status === "error" ? (
-            <ShieldX className="w-16 h-16 text-red-400" />
+            <ShieldX className="w-16 h-16 text-destructive" />
           ) : (
-            <Gift className="w-16 h-16 text-purple-400" />
+            <Gift className="w-16 h-16 text-secondary" />
           )}
         </div>
 
-        <h1 className="text-2xl font-bold text-white mb-2">
+        <h1 className="text-2xl font-bold text-foreground mb-2">
           {status === "success" ? "Claim Complete!" : "Vanta Link Received"}
         </h1>
 
         {status !== "error" && (
-          <div className="bg-gray-800/50 p-5 rounded-xl mb-6 border border-gray-700">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-2">You&apos;re Receiving</p>
+          <div className="bg-muted/50 p-5 rounded-xl mb-6 border border-input">
+            <p className="text-[10px] text-muted-foreground uppercase font-bold mb-2">You&apos;re Receiving</p>
             <div className="flex items-center gap-3">
               {tokenInfo?.icon && (
                 <Image src={tokenInfo.icon} alt={tokenSymbol} width={40} height={40} className="rounded-full" />
               )}
 
               <div className="flex items-center w-full justify-between gap-3">
-                <div className="flex flex-col">
-                  <span className="text-xl font-bold text-white">{netAmount.toFixed(2)}</span>
-                  <span className="text-md text-gray-400 font-medium">{tokenSymbol}</span>
+                <div className="flex flex-col items-start">
+                  <span className="text-xl font-bold text-foreground">{netAmount.toFixed(2)}</span>
+                  <span className="text-md text-muted-foreground font-medium">{tokenSymbol}</span>
                 </div>
-                <span className="text-lg text-gray-400 font-medium">{tokenSymbol}</span>
+                <span className="text-lg text-muted-foreground font-medium">{tokenSymbol}</span>
               </div>
             </div>
 
             {/* Gasless Badge */}
-            <div className="mt-3 flex items-center justify-center gap-2 text-green-400 text-xs font-medium bg-green-900/20 py-2 px-3 rounded-lg border border-green-900/30">
+            <div className="mt-3 flex items-center justify-center gap-2 text-green-500 text-xs font-medium bg-green-500/10 py-2 px-3 rounded-lg border border-green-500/20">
               <Sparkles size={14} />
               <span>Gasless — No fees for you!</span>
             </div>
@@ -294,38 +268,40 @@ function ClaimContent() {
         )}
 
         {status === "error" && complianceError && (
-          <div className="bg-red-900/30 border border-red-500/50 p-4 rounded-xl mb-6 text-left">
-            <p className="text-red-400 text-sm font-medium whitespace-pre-line">{complianceError}</p>
-            <p className="text-gray-500 text-xs mt-2">This wallet is on a risk list and cannot receive funds.</p>
+          <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-xl mb-6 text-left">
+            <p className="text-destructive text-sm font-medium whitespace-pre-line">{complianceError}</p>
+            <p className="text-muted-foreground text-xs mt-2">
+              This wallet is on a risk list and cannot receive funds.
+            </p>
           </div>
         )}
 
         {status === "error" && !complianceError && (
-          <div className="bg-red-900/20 p-4 rounded-xl mb-6 text-red-400 text-sm">Invalid or already claimed link.</div>
+          <div className="bg-destructive/10 p-4 rounded-xl mb-6 text-destructive text-sm">
+            Invalid or already claimed link.
+          </div>
         )}
 
         {status === "success" ? (
-          <a
-            href={`https://solscan.io/tx/${txHash}`}
-            target="_blank"
-            className="block w-full py-4 bg-gray-800 text-white font-bold rounded-xl hover:bg-gray-700"
-          >
-            Ver no Solscan ↗
+          <a href={`https://solscan.io/tx/${txHash}`} target="_blank" className="block w-full">
+            <Button className="w-full">Ver no Solscan ↗</Button>
           </a>
         ) : (
-          <button
+          <Button
             onClick={handleClaim}
             disabled={status !== "idle" || !publicKey}
-            className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
+            className="w-full font-bold transition-all disabled:opacity-50"
+            size="lg"
+            variant={!publicKey ? "secondary" : "default"}
           >
             {!publicKey ? "Connect Wallet" : status === "claiming" ? "Processing..." : "Claim (Gasless)"}
-          </button>
+          </Button>
         )}
 
         <div className="mt-8 text-left">
           <ProcessStatus steps={steps} />
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -334,7 +310,9 @@ export default function ClaimPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white">Loading Link...</div>
+        <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
+          Loading Link...
+        </div>
       }
     >
       <ClaimContent />

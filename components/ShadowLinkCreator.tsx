@@ -8,10 +8,13 @@ import { Keypair, Transaction, SystemProgram } from "@solana/web3.js";
 import bs58 from "bs58";
 import { ShadowWireClient, SUPPORTED_TOKENS as SDK_TOKENS } from "@radr/shadowwire";
 import QRCode from "react-qr-code";
-import { ProcessStatus } from "./ProcessStatus";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ProcessStatus, ProcessStep, StepStatus } from "@/components/ProcessStatus";
 import { TokenOption } from "@/lib/tokens";
 import { calculateLinkGasFee, getTokenMinimumAmount, getTokenFeePercentage } from "@/lib/fees";
-import { AlertCircle, CheckCircle, Copy, Gift, Info } from "lucide-react";
+import { AlertCircle, CheckCircle, Copy, Gift, Info, ShieldCheck, Key, Lock, Send } from "lucide-react";
 
 // SDK Token Type
 type SdkTokenType = (typeof SDK_TOKENS)[number];
@@ -78,14 +81,14 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
   }, [amount]);
 
   // Step Control
-  const [steps, setSteps] = useState([
-    { id: "compliance", label: "Range Verification (Compliance)", status: "pending" as any },
-    { id: "keygen", label: "Generating Temporary Keys", status: "pending" as any },
-    { id: "zkproof", label: "Radr: Privacy Proof", status: "pending" as any },
-    { id: "transfer", label: "Transfer to Link", status: "pending" as any }
+  const [steps, setSteps] = useState<ProcessStep[]>([
+    { id: "compliance", label: "Range Verification", status: "pending", icon: ShieldCheck },
+    { id: "keygen", label: "Generating Keys", status: "pending", icon: Key },
+    { id: "zkproof", label: "Radr Privacy Proof", status: "pending", icon: Lock },
+    { id: "transfer", label: "Transfer to Link", status: "pending", icon: Send }
   ]);
 
-  const updateStep = (id: string, status: "loading" | "success" | "error", detail?: string) => {
+  const updateStep = (id: string, status: StepStatus, detail?: string) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, status, detail } : s)));
   };
 
@@ -250,115 +253,140 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
   // --- SCREEN 1: INPUT ---
   if (view === "input") {
     return (
-      <div className="w-full max-w-md mx-auto bg-[#0F1115] rounded-3xl border border-gray-800 p-6 shadow-2xl relative">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="bg-purple-900/30 border border-purple-500/30 px-3 py-1 rounded-full text-xs text-purple-300 font-bold flex items-center gap-2">
-            <span>
-              <Gift />
-            </span>{" "}
-            Vanta Link
-          </div>
-          {globalBalance > 0 ? (
-            <span className="text-[10px] text-green-400 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
-            </span>
-          ) : (
-            <span className="text-[10px] text-red-400">No Balance</span>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
+        {/* Left Column: Input */}
+        <Card className="bg-card/50 border-border/50 h-full">
+          <CardContent className="p-8 flex flex-col justify-between h-full">
+            <div>
+              {/* Header */}
+              <div className="flex justify-between items-center mb-12">
+                <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full text-xs text-primary font-bold flex items-center gap-2">
+                  <Gift size={14} /> Vanta Link
+                </div>
+                {globalBalance > 0 ? (
+                  <span className="text-[10px] text-green-400 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> Online
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-destructive">No Balance</span>
+                )}
+              </div>
+
+              {/* Big Input */}
+              <div className="text-center mb-8 relative">
+                <div className="flex justify-center items-end gap-2">
+                  <span className="text-4xl text-muted-foreground font-bold mb-4">
+                    {globalToken.symbol.includes("USD") ? "$" : ""}
+                  </span>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="bg-transparent text-6xl font-bold text-foreground text-center w-full outline-none placeholder:text-muted/20"
+                  />
+                </div>
+
+                <div className="flex justify-center mt-6">
+                  <div className="flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full border border-border/50">
+                    <Image
+                      src={globalToken.icon}
+                      className="rounded-full"
+                      alt={globalToken.symbol}
+                      width={24}
+                      height={24}
+                    />
+                    <span className="text-foreground font-bold text-lg">{globalToken.symbol}</span>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-4 text-center">
+                  Available: {globalBalance.toFixed(4)} {globalToken.symbol}
+                </p>
+              </div>
+            </div>
+
+            {/* Error UI */}
+            {error && (
+              <div className="flex items-center gap-2 justify-center mb-6 text-destructive animate-in fade-in slide-in-from-top-1 bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+                <AlertCircle size={16} />
+                <span className="text-sm font-medium">{error}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right Column: Breakdown & Action */}
+        <div className="flex flex-col gap-4">
+          <Card className="flex-1 bg-muted/10 border-border/50">
+            <CardContent className="p-6 h-full flex flex-col">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase mb-6 tracking-wider">
+                Transaction Details
+              </h3>
+
+              {!amount || Number(amount) <= 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/30 space-y-4">
+                  <Info size={48} />
+                  <p className="text-sm text-center max-w-50">Enter an amount to see the breakdown</p>
+                </div>
+              ) : (
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+                  <div className="bg-background/50 p-4 rounded-xl border border-border/50 text-sm space-y-3">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Link Amount</span>
+                      <span className="text-foreground font-mono">
+                        {Number(amount).toFixed(4)} {globalToken.symbol}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Info size={12} /> Protocol Fee ({(getTokenFeePercentage(globalToken.symbol) * 100).toFixed(1)}
+                        %)
+                      </span>
+                      <span className="text-orange-400 font-mono">
+                        -{(Number(amount) * getTokenFeePercentage(globalToken.symbol)).toFixed(4)} {globalToken.symbol}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Info size={12} /> Gas Fee (Gasless)
+                      </span>
+                      <span className="text-yellow-500 font-mono">+{gasFee.toFixed(4)} SOL</span>
+                    </div>
+
+                    <div className="border-t border-border pt-3 flex justify-between text-muted-foreground">
+                      <span>Recipient receives</span>
+                      <span className="text-primary font-mono text-lg font-bold">
+                        ~{(Number(amount) * (1 - getTokenFeePercentage(globalToken.symbol))).toFixed(4)}{" "}
+                        {globalToken.symbol}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-secondary/5 p-4 rounded-xl border border-secondary/20">
+                    <div className="flex justify-between font-bold items-center">
+                      <span className="text-secondary text-xs uppercase tracking-wider">Total Debit</span>
+                      <span className="text-secondary text-xl font-mono">
+                        {Number(amount).toFixed(4)} {globalToken.symbol}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Button
+            onClick={handleCreateLink}
+            disabled={!amount || Number(amount) <= 0}
+            className="w-full py-8 text-xl font-bold shadow-lg hover:shadow-xl transition-all"
+            size="lg"
+          >
+            Generate Private Link
+          </Button>
         </div>
-
-        {/* Big Input */}
-        <div className="text-center mb-8 relative">
-          <div className="flex justify-center items-end gap-2">
-            <span className="text-4xl text-gray-500 font-bold mb-4">
-              {globalToken.symbol.includes("USD") ? "$" : ""}
-            </span>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="bg-transparent text-6xl font-bold text-white text-center w-full outline-none placeholder-gray-800"
-            />
-          </div>
-
-          {/* TOKEN BADGE (Não clicável, apenas informativo) */}
-          <div className="flex justify-center mt-4">
-            <div className="flex items-center gap-2 bg-gray-800/50 px-4 py-2 rounded-full border border-gray-700/50">
-              <Image src={globalToken.icon} className="rounded-full" alt={globalToken.symbol} width={20} height={20} />
-              <span className="text-white font-bold">{globalToken.symbol}</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-500 mt-2">
-            Available: {globalBalance.toFixed(4)} {globalToken.symbol}
-          </p>
-        </div>
-
-        {/* --- ERROR UI FIX --- */}
-        {error && (
-          <div className="flex items-center gap-2 justify-center mb-6 text-red-400 animate-in fade-in slide-in-from-top-1">
-            <AlertCircle size={16} />
-            <span className="text-sm font-medium">{error}</span>
-          </div>
-        )}
-
-        {/* Cost Breakdown (Only shows if valid value) */}
-        {!error && amount && Number(amount) > 0 && (
-          <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 text-xs space-y-2 mb-6">
-            <div className="flex justify-between text-gray-400">
-              <span>Link Amount</span>
-              <span className="text-white font-mono">
-                {Number(amount).toFixed(4)} {globalToken.symbol}
-              </span>
-            </div>
-
-            {/* Protocol Fee (SDK) */}
-            <div className="flex justify-between text-gray-400">
-              <span className="flex items-center gap-1">
-                <Info size={10} /> Protocol Fee ({(getTokenFeePercentage(globalToken.symbol) * 100).toFixed(1)}%)
-              </span>
-              <span className="text-orange-400 font-mono">
-                -{(Number(amount) * getTokenFeePercentage(globalToken.symbol)).toFixed(4)} {globalToken.symbol}
-              </span>
-            </div>
-
-            {/* Gas Fee (Blockchain) */}
-            <div className="flex justify-between text-gray-400">
-              <span className="flex items-center gap-1">
-                <Info size={10} /> Gas Fee (Gasless)
-              </span>
-              <span className="text-yellow-500 font-mono">+{gasFee.toFixed(4)} SOL</span>
-            </div>
-
-            {/* Recipient will receive */}
-            <div className="border-t border-gray-700 pt-2 flex justify-between text-gray-400">
-              <span>Recipient receives</span>
-              <span className="text-green-400 font-mono">
-                ~{(Number(amount) * (1 - getTokenFeePercentage(globalToken.symbol))).toFixed(4)} {globalToken.symbol}
-              </span>
-            </div>
-
-            {/* Total to Debit */}
-            <div className="flex justify-between font-bold">
-              <span className="text-gray-300">Total Cost</span>
-              <span className="text-purple-300 font-mono">
-                {Number(amount).toFixed(4)} {globalToken.symbol}
-                {globalToken.symbol !== "SOL" && ` + ${gasFee.toFixed(4)} SOL`}
-                {globalToken.symbol === "SOL" && ` + ${gasFee.toFixed(4)} SOL`}
-              </span>
-            </div>
-          </div>
-        )}
-
-        <button
-          onClick={handleCreateLink}
-          disabled={Number(amount) <= 0}
-          className="w-full py-4 bg-white hover:bg-gray-200 text-black font-bold rounded-2xl text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Generate Private Link
-        </button>
       </div>
     );
   }
@@ -366,75 +394,71 @@ export default function ShadowLinkCreator({ globalToken, globalBalance, onSucces
   // --- SCREEN 2: PROCESSING ---
   if (view === "processing") {
     return (
-      <div className="max-w-md mx-auto p-6 bg-gray-900 rounded-3xl border border-gray-800 shadow-xl">
+      <Card className="max-w-md mx-auto p-6 bg-card rounded-3xl border border-border shadow-xl">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <span className="text-2xl">⚙️</span>
           </div>
-          <h3 className="text-white font-bold">Creating Vanta Link...</h3>
-          <p className="text-gray-500 text-xs mt-1">Ensuring anonymity via ZK Proofs.</p>
+          <h3 className="text-foreground font-bold">Creating Vanta Link...</h3>
+          <p className="text-muted-foreground text-xs mt-1">Ensuring anonymity via ZK Proofs.</p>
         </div>
         <ProcessStatus steps={steps} />
-      </div>
+      </Card>
     );
   }
 
   // --- SCREEN 3: SUCCESS ---
   return (
-    <div className="max-w-md mx-auto p-6 bg-[#0F1115] rounded-3xl border border-gray-800 shadow-2xl text-white animate-fade-in">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-1">Ready! 🎉</h2>
-        <p className="text-gray-400 text-sm mb-6">Funds wrapped successfully.</p>
+    <Card className="max-w-md mx-auto p-6 bg-card rounded-3xl border border-border shadow-2xl animate-fade-in">
+      <CardContent>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-1 text-foreground">Ready! 🎉</h2>
+          <p className="text-muted-foreground text-sm mb-6">Funds wrapped successfully.</p>
 
-        <div className="bg-white p-4 rounded-xl inline-block mb-6">
-          <QRCode
-            size={200}
-            value={generatedLink}
-            bgColor="#ffffff"
-            fgColor="#000000"
-            style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-          />
-        </div>
+          <div className="bg-white p-4 rounded-xl inline-block mb-6">
+            <QRCode
+              size={200}
+              value={generatedLink}
+              bgColor="#ffffff"
+              fgColor="#000000"
+              style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+            />
+          </div>
 
-        <div className="flex gap-2 mb-4">
-          <input
-            readOnly
-            value={generatedLink}
-            className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 text-xs text-gray-300 truncate font-mono outline-none"
-          />
-          <button
-            onClick={copyToClipboard}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-3 rounded-lg transition-colors"
-          >
-            {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
-          </button>
-        </div>
+          <div className="flex gap-2 mb-4">
+            <Input readOnly value={generatedLink} className="flex-1 font-mono text-xs" />
+            <Button onClick={copyToClipboard} size="icon" variant={copied ? "default" : "secondary"}>
+              {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+            </Button>
+          </div>
 
-        <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-800 mb-4">
-          <p className="text-[10px] text-gray-500 uppercase font-bold mb-2">Wrapped Amount</p>
-          <div className="flex items-center gap-3">
-            <Image src={globalToken.icon} alt={globalToken.symbol} width={38} height={38} className="rounded-full" />
-            <div className="flex items-center w-full justify-between gap-3">
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-white">{amount}</span>
-                <span className="text-md text-gray-400 font-medium">{globalToken.symbol}</span>
+          <div className="bg-muted/30 p-4 rounded-xl border border-border mb-4">
+            <p className="text-[10px] text-muted-foreground uppercase font-bold mb-2">Wrapped Amount</p>
+            <div className="flex items-center gap-3">
+              <Image src={globalToken.icon} alt={globalToken.symbol} width={38} height={38} className="rounded-full" />
+              <div className="flex items-center w-full justify-between gap-3">
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold text-foreground">{amount}</span>
+                  <span className="text-md text-muted-foreground font-medium">{globalToken.symbol}</span>
+                </div>
+                <span className="text-lg text-muted-foreground font-medium">{globalToken.symbol}</span>
               </div>
-              <span className="text-lg text-gray-400 font-medium">{globalToken.symbol}</span>
             </div>
           </div>
-        </div>
 
-        <button
-          onClick={() => {
-            setView("input");
-            setGeneratedLink("");
-            setAmount("");
-          }}
-          className="mt-4 text-gray-500 text-sm hover:text-white font-medium transition-colors"
-        >
-          ← Create New Link
-        </button>
-      </div>
-    </div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setView("input");
+              setGeneratedLink("");
+              setAmount("");
+            }}
+            className="mt-4 text-muted-foreground hover:text-foreground font-medium"
+          >
+            ← Create New Link
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

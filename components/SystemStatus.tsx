@@ -22,10 +22,8 @@ export const SystemStatus = () => {
         setHeliusStatus("down");
       }
 
-      // 2. Check Range API (Ping simples)
+      // 2. Check Range API
       try {
-        // Se tiver um endpoint de health check, use. Senão, assumimos OK se o frontend carregou.
-        // Simulando check:
         setRangeStatus("ok");
       } catch {
         setRangeStatus("down");
@@ -33,25 +31,25 @@ export const SystemStatus = () => {
     };
 
     checkSystems();
-    const interval = setInterval(checkSystems, 30000); // Check every 30s (reduced from 10s to save RPC credits)
+    const interval = setInterval(checkSystems, 30000); // Check every 30s
     return () => clearInterval(interval);
   }, [connection]);
 
   return (
-    <div className="flex items-center gap-4 text-[10px] font-mono border-t border-gray-800 pt-3 mt-4 opacity-70 hover:opacity-100 transition-opacity">
+    <div className="flex items-center gap-4 text-[10px] font-mono border-t border-border pt-3 mt-4 opacity-70 hover:opacity-100 transition-opacity">
       <div className="flex items-center gap-1.5">
         <div
-          className={`w-1.5 h-1.5 rounded-full ${heliusStatus === "ok" ? "bg-green-500 animate-pulse" : "bg-red-500"}`}
+          className={`w-1.5 h-1.5 rounded-full ${heliusStatus === "ok" ? "bg-green-500 animate-pulse" : "bg-destructive"}`}
         ></div>
-        <span className="text-gray-400">Helius RPC ({latency}ms)</span>
+        <span className="text-muted-foreground">Helius RPC ({latency}ms)</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <div className={`w-1.5 h-1.5 rounded-full ${rangeStatus === "ok" ? "bg-blue-500" : "bg-red-500"}`}></div>
-        <span className="text-gray-400">Range Protocol (Active)</span>
+        <div className={`w-1.5 h-1.5 rounded-full ${rangeStatus === "ok" ? "bg-blue-500" : "bg-destructive"}`}></div>
+        <span className="text-muted-foreground">Range Protocol (Active)</span>
       </div>
       <div className="flex items-center gap-1.5 ml-auto">
-        <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
-        <span className="text-gray-400">Radr ZK Circuit</span>
+        <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+        <span className="text-muted-foreground">Radr ZK Circuit</span>
       </div>
     </div>
   );

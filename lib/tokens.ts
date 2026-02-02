@@ -1,17 +1,23 @@
-// utils/tokens.ts
-
 import { formatFeePercentage } from "./fees";
 
 export interface TokenOption {
   symbol: string;
   name: string;
   decimals: number;
-  mintAddress: string; // Contract address on Mainnet
-  icon: string; // Logo URL
+  mintAddress: string;
+  icon: string;
+  recommended?: boolean;
 }
 
 export const SUPPORTED_TOKENS: TokenOption[] = [
-  // --- Main / Infrastructure ---
+  {
+    symbol: "USD1",
+    name: "World Liberty Financial USD",
+    decimals: 6,
+    mintAddress: "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+    icon: "/icons/usdc1.svg",
+    recommended: true
+  },
   {
     symbol: "SOL",
     name: "Solana",
@@ -25,13 +31,6 @@ export const SUPPORTED_TOKENS: TokenOption[] = [
     decimals: 6,
     mintAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     icon: "/icons/usdc.svg"
-  },
-  {
-    symbol: "USD1",
-    name: "World Liberty Financial USD",
-    decimals: 6,
-    mintAddress: "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
-    icon: "/icons/usdc1.svg"
   },
   {
     symbol: "ZEC",
@@ -168,16 +167,10 @@ export const SUPPORTED_TOKENS: TokenOption[] = [
   }
 ];
 
-/**
- * Utility function to get token by symbol (e.g., getTokenBySymbol('SOL'))
- */
 export const getTokenBySymbol = (symbol: string): TokenOption | undefined => {
   return SUPPORTED_TOKENS.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase());
 };
 
-/**
- * Get the fee string for a token (dynamically from SDK)
- */
 export const getTokenFee = (symbol: string): string => {
   return formatFeePercentage(symbol);
 };

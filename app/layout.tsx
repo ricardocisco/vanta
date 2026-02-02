@@ -41,8 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-cover bg-center bg-fixed bg-no-repeat`}
-        style={{ backgroundImage: "url(/images/bg-vanta-rg.png)" }}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-vanta-vortex bg-cover bg-center bg-fixed bg-no-repeat bg-background text-foreground`}
       >
         <SolanaProvider>{children}</SolanaProvider>
       </body>

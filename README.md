@@ -59,12 +59,15 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 
 ### 🪙 Multi-Token Support
 
-- SOL (Native)
-- USDC
-- USD1 (World Liberty Financial)
-- BONK
-- ZEC (Portal/Wormhole)
-- And 15+ more tokens
+| Token                           | Symbol | Recommended              |
+| ------------------------------- | ------ | ------------------------ |
+| **World Liberty Financial USD** | `USD1` | ⭐ **Best for Payments** |
+| USDC                            | `USDC` |                          |
+| Solana                          | `SOL`  |                          |
+| Bonk                            | `BONK` |                          |
+| ZCash (Wormhole)                | `ZEC`  |                          |
+
+> **Why USD1?** We recommend using `USD1` for all private payments due to its high liquidity and optimized fee structure within our ZK circuits.
 
 ---
 

@@ -1,6 +1,6 @@
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
@@ -8,14 +8,19 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       type={type}
       data-slot="input"
       className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        // Base styling
+        "flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-all duration-200",
+        "file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground",
+        // Colors & Borders (Vanta Theme)
+        "border-secondary/30 bg-black/20 text-foreground", // Default: Dark background, subtle purple border
+        "hover:border-secondary/60 hover:bg-black/40", // Hover: Brighter purple border
+        "focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:shadow-[0_0_10px_rgba(0,255,65,0.2)]", // Focus: Green Border + Glow
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Input }
+export { Input };
