@@ -149,8 +149,8 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/ricardocisco/vanta-protocol.git
-cd vanta-protocol
+git clone https://github.com/ricardocisco/vanta.git
+cd vanta
 ```
 
 2. **Install dependencies**
