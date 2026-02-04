@@ -10,13 +10,18 @@
 
 _Send and receive tokens privately with Zero-Knowledge Proofs and Compliance built-in._
 
-[Demo Video](#demo) • [Features](#features) • [How It Works](#how-it-works) • [Getting Started](#getting-started)
+<br />
+
+<a href="#features">Features</a> •
+<a href="#roadmap">Roadmap</a> •
+<a href="#how-it-works">How It Works</a> •
+<a href="#getting-started">Getting Started</a>
 
 </div>
 
 ---
 
-## 📖 Overview
+## Overview
 
 **Vanta Protocol** is a privacy-focused payment application built on Solana that enables users to:
 
@@ -29,28 +34,28 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 
 ---
 
-## ✨ Features
+## Features
 
-### 🏦 Private Wallet
+### Private Wallet
 
 - Deposit SOL and SPL tokens into your private balance
 - Withdraw back to your public wallet anytime
 - Real-time balance tracking with ZK proofs
 
-### 💳 Private Transfers
+### Private Transfers
 
 - Send tokens to any wallet address privately
 - Zero-Knowledge proofs hide sender, recipient, and amount
 - Built-in compliance check before every transfer
 
-### 🔗 Vanta Links
+### Vanta Links
 
 - Create shareable payment links
 - Recipients claim without knowing the sender
 - QR code generation for easy sharing
 - Gasless claims - fees paid by the link creator
 
-### 🛡️ Compliance Integration
+### Compliance Integration
 
 - **Range Protocol** integration for risk scoring
 - Automatic wallet screening (0-10 risk score)
@@ -71,7 +76,27 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 
 ---
 
-## 🛠️ Technology Stack
+## Roadmap
+
+- [x] **Phase 1: Genesis**
+  - [x] Project Setup & Architecture
+  - [x] Wallet Connection (Solana Adapter)
+  - [x] Basic ZK-Proof Deposits
+
+- [x] **Phase 2: Core Features**
+  - [x] Private Transfers (Shielded P2P)
+  - [x] Vanta Links (Claimable URLs)
+  - [x] Compliance Integration (Range Protocol)
+  - [x] Terminal UI Redesign
+
+- [ ] **Phase 3: Future Integration (Current)**
+  - [ ] **Private Swaps** (Trade tokens privately)
+  - [ ] **Private Payroll Dashboard** (Private dashboard more tools)
+  - [ ] **Vanta Link V2** (more links, more secure!)
+
+---
+
+## Technology Stack
 
 | Component      | Technology            | Purpose                       |
 | -------------- | --------------------- | ----------------------------- |
@@ -85,7 +110,7 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 
 ---
 
-## 🔧 How It Works
+## How It Works
 
 ### Architecture
 
@@ -134,7 +159,7 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
