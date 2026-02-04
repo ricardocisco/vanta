@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { ShadowWireClient, initWASM, isWASMSupported, SUPPORTED_TOKENS as SDK_TOKENS } from "@radr/shadowwire";
 import { SUPPORTED_TOKENS, TokenOption } from "@/lib/tokens";
-import { RotateCw, Send, Link, Shield, ChevronDown } from "lucide-react";
+import { RotateCw, Send, Link, Shield, ChevronDown, ArrowDownUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import WalletManager from "@/components/WalletManager";
@@ -12,6 +12,7 @@ import PrivatePayroll from "@/components/PrivatePayroll";
 import ShadowLinkCreator from "@/components/ShadowLinkCreator";
 import { SystemStatus } from "@/components/SystemStatus";
 import LinkHistory from "@/components/LinkStorage";
+import SwapManager from "../components/SwapManager";
 
 // SDK Token Type
 type SdkTokenType = (typeof SDK_TOKENS)[number];
@@ -96,7 +97,7 @@ export default function ShadowTerminal() {
   const { publicKey } = useWallet();
 
   // GLOBAL STATE
-  const [activeTab, setActiveTab] = useState<"wallet" | "transfer" | "link">("wallet");
+  const [activeTab, setActiveTab] = useState<"wallet" | "transfer" | "link" | "swap">("wallet");
   const [selectedToken, setSelectedToken] = useState<TokenOption>(SUPPORTED_TOKENS[0]);
   const [privateBalance, setPrivateBalance] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -172,6 +173,13 @@ export default function ShadowTerminal() {
           icon={Shield}
         />
         <TabButton
+          active={activeTab === "swap"}
+          onClick={() => setActiveTab("swap")}
+          label="Swap"
+          icon={ArrowDownUp}
+          soon
+        />
+        <TabButton
           active={activeTab === "transfer"}
           onClick={() => setActiveTab("transfer")}
           label="Transfer"
@@ -186,6 +194,9 @@ export default function ShadowTerminal() {
           <WalletManager selectedToken={selectedToken} privateBalance={privateBalance} onUpdateBalance={fetchBalance} />
         )}
 
+        {activeTab === "swap" && (
+          <SwapManager selectedToken={selectedToken} privateBalance={privateBalance} onSuccess={fetchBalance} />
+        )}
         {activeTab === "transfer" && (
           <PrivatePayroll selectedToken={selectedToken} privateBalance={privateBalance} onSuccess={fetchBalance} />
         )}
@@ -211,22 +222,35 @@ const TabButton = ({
   active,
   onClick,
   label,
-  icon: Icon
+  icon: Icon,
+  soon = false
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   icon?: React.ElementType;
+  soon?: boolean;
 }) => (
   <button
-    onClick={onClick}
+    onClick={soon ? undefined : onClick}
+    disabled={soon}
     className={`flex-1 py-4 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 relative overflow-hidden ${
       active
         ? "border-primary text-primary bg-primary/10 shadow-[inner_0_0_20px_rgba(0,255,65,0.1)]"
         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-    }`}
+    } ${soon ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
   >
-    {active && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_var(--primary)]" />}
+    {soon && (
+      <div className="absolute top-2 left-4 z-10">
+        <span className="bg-muted/20 text-muted-foreground text-[0.6rem] uppercase tracking-widest font-bold px-2 py-0.5 rounded-br-lg border-r border-b border-border/20 backdrop-blur-sm">
+          Soon
+        </span>
+      </div>
+    )}
+
+    {active && !soon && (
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_var(--primary)]" />
+    )}
     {Icon && <Icon size={16} className={active ? "drop-shadow-[0_0_5px_var(--primary)]" : ""} />}
     {label}
   </button>
