@@ -37,6 +37,7 @@ The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactio
 
 ## Demo Video
 
+- A simple video showing how it works using USD1
 https://github.com/user-attachments/assets/4c316595-3683-4792-9a51-fe1c49a87aae
 
 
