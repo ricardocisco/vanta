@@ -12,6 +12,7 @@ _Send and receive tokens privately with Zero-Knowledge Proofs and Compliance bui
 
 <br />
 
+<a href="#demo-video">Demo Video</a> •
 <a href="#features">Features</a> •
 <a href="#roadmap">Roadmap</a> •
 <a href="#how-it-works">How It Works</a> •
@@ -31,6 +32,14 @@ _Send and receive tokens privately with Zero-Knowledge Proofs and Compliance bui
 - ✅ **Stay compliant** with built-in risk assessment via Range Protocol
 
 The protocol leverages **Radr ShadowWire SDK** for privacy-preserving transactions and **Range Protocol** for compliance checks, ensuring that private transactions are both secure and compliant.
+
+---
+
+## Demo Video
+
+https://github.com/user-attachments/assets/4c316595-3683-4792-9a51-fe1c49a87aae
+
+
 
 ---
 
